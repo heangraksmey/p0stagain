@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Advanced Telegram Bot for posting to channels with schedule, spoiler, and paid content features",
   "main": "telegram-bot-server.js",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "start": "node telegram-bot-server.js",
     "dev": "nodemon telegram-bot-server.js"
