@@ -1,0 +1,6 @@
+node_modules/
+.env
+.telegram-session
+.telegram-config.json
+.scheduled-messages.json
+npm-debug.log*

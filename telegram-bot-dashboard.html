@@ -1,0 +1,2445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Bot Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #a855f7;
+            --primary-dark: #9333ea;
+            --secondary: #ec4899;
+            --bg-dark: #0f172a;
+            --bg-darker: #020617;
+            --text-light: #e2e8f0;
+            --text-muted: #94a3b8;
+            --success: #22c55e;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #581c87 50%, #0f172a 100%);
+            color: var(--text-light);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.4);
+            border-bottom: 1px solid rgba(168, 85, 247, 0.2);
+            padding: 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            backdrop-filter: blur(10px);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 8px 16px rgba(168, 85, 247, 0.3);
+        }
+
+        .header-text h1 {
+            font-size: 24px;
+            font-weight: bold;
+            background: linear-gradient(90deg, #a78bfa, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-text p {
+            font-size: 12px;
+            color: var(--primary);
+            margin-top: 4px;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .status-item {
+            text-align: right;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.connected {
+            background: var(--success);
+        }
+
+        .status-dot.disconnected {
+            background: var(--error);
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-text {
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-stats {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .status-stats strong {
+            color: var(--text-light);
+        }
+
+        .alert {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            color: #fca5a5;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .alert.hidden {
+            display: none;
+        }
+
+        .alert-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .alert-content p {
+            margin: 0;
+            font-size: 14px;
+        }
+
+        .alert-content p:last-child {
+            margin-top: 4px;
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid rgba(34, 197, 94, 0.5);
+            color: #86efac;
+            padding: 12px 20px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 100;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .toast.error {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.5);
+            color: #fca5a5;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 12px;
+            background: rgba(30, 41, 59, 0.5);
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            margin-bottom: 2rem;
+        }
+
+        .tab-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            color: var(--text-light);
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            color: var(--text-light);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            gap: 12px;
+            margin: 1.5rem 0;
+        }
+
+        .checkbox-btn {
+            flex: 1;
+            padding: 16px;
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            background: rgba(30, 41, 59, 0.5);
+            color: var(--text-light);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            text-align: center;
+            font-size: 13px;
+        }
+
+        .checkbox-btn.active {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-color: var(--primary);
+        }
+
+        .btn {
+            background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(168, 85, 247, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-block {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .btn-secondary {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            color: var(--text-light);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #fca5a5;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        @media (min-width: 1024px) {
+            .grid {
+                grid-template-columns: 2fr 1fr;
+            }
+        }
+
+        .card {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .card h2 {
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+
+        .card p {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+        }
+
+        .list {
+            max-height: 400px;
+            overflow-y: auto;
+            space-y: 1rem;
+        }
+
+        .list-item {
+            background: rgba(15, 23, 42, 0.5);
+            padding: 12px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            border: 1px solid rgba(168, 85, 247, 0.1);
+            transition: all 0.2s;
+        }
+
+        .list-item:hover {
+            background: rgba(15, 23, 42, 0.8);
+            border-color: rgba(168, 85, 247, 0.3);
+        }
+
+        .list-item-text {
+            flex: 1;
+        }
+
+        .list-item-name {
+            color: var(--text-light);
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .list-item-id {
+            color: var(--text-muted);
+            font-size: 12px;
+            margin-top: 2px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 1rem;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+            font-size: 12px;
+            border-top: 1px solid rgba(168, 85, 247, 0.2);
+            margin-top: 3rem;
+        }
+
+        .hint {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .char-count {
+            display: inline-block;
+            background: rgba(168, 85, 247, 0.2);
+            color: var(--primary);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+
+        .badge {
+            display: inline-block;
+            background: rgba(168, 85, 247, 0.2);
+            color: var(--primary);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-right: 4px;
+            margin-bottom: 4px;
+        }
+
+        .badge.error {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+
+        .media-type-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .media-type-btn {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            background: rgba(30, 41, 59, 0.5);
+            color: var(--text-muted);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-size: 13px;
+        }
+
+        .media-type-btn.active {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .file-drop-zone {
+            border: 2px dashed rgba(168, 85, 247, 0.4);
+            border-radius: 12px;
+            padding: 32px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(15, 23, 42, 0.5);
+            min-height: 160px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .file-drop-zone:hover {
+            border-color: var(--primary);
+            background: rgba(168, 85, 247, 0.05);
+        }
+
+        .file-drop-zone.drag-over {
+            border-color: var(--primary);
+            background: rgba(168, 85, 247, 0.1);
+            transform: scale(1.01);
+        }
+
+        #filePreview img {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 8px;
+            object-fit: contain;
+        }
+
+        .remove-file-btn {
+            margin-top: 8px;
+            background: none;
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #fca5a5;
+            padding: 4px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .remove-file-btn:hover {
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .channel-check-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .channel-check-item:hover {
+            background: rgba(168, 85, 247, 0.08);
+        }
+
+        .channel-check-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--primary);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .channel-check-item.checked {
+            background: rgba(168, 85, 247, 0.1);
+        }
+
+        .step-badge {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            color: var(--text-muted);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            flex-shrink: 0;
+            transition: all 0.3s;
+        }
+
+        .step-badge.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .step-badge.done {
+            background: var(--success);
+            border-color: var(--success);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-content">
+            <div class="header-left">
+                <div class="header-icon">📤</div>
+                <div class="header-text">
+                    <h1>Telegram Bot Manager</h1>
+                    <p>Post • Schedule • Broadcast</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <a href="image-downloader.html" style="
+                    display:inline-flex; align-items:center; gap:8px;
+                    padding:8px 16px; border-radius:10px;
+                    background:rgba(168,85,247,0.15); border:1px solid rgba(168,85,247,0.3);
+                    color:#a78bfa; text-decoration:none; font-size:13px; font-weight:500;
+                    transition:background 0.2s, border-color 0.2s;
+                " onmouseover="this.style.background='rgba(168,85,247,0.28)';this.style.borderColor='rgba(168,85,247,0.6)'"
+                   onmouseout="this.style.background='rgba(168,85,247,0.15)';this.style.borderColor='rgba(168,85,247,0.3)'">
+                    🖼️ Image Downloader
+                </a>
+                <div class="header-right">
+                    <div class="status-item">
+                        <div class="status-indicator">
+                            <div class="status-dot disconnected" id="statusDot"></div>
+                            <span class="status-text" id="statusText">Connecting...</span>
+                        </div>
+                        <div class="status-stats">
+                            Channels: <strong id="channelCount">0</strong>
+                        </div>
+                        <div class="status-stats">
+                            Scheduled: <strong id="scheduledCount">0</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Alert -->
+        <div class="alert hidden" id="alertBox">
+            <div class="alert-icon">⚠️</div>
+            <div class="alert-content">
+                <p id="alertTitle">Server Not Connected</p>
+                <p id="alertMessage">Run: npm start</p>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('post')">📤 Post</button>
+            <button class="tab-btn" onclick="switchTab('bulk')">📁 Bulk Post</button>
+            <button class="tab-btn" onclick="switchTab('channels')">📋 Channels</button>
+            <button class="tab-btn" onclick="switchTab('scheduled')">⏰ Scheduled</button>
+            <button class="tab-btn" onclick="switchTab('log')">📜 Log <span id="logBadge" style="display:none; background:var(--primary); color:#fff; border-radius:10px; padding:1px 7px; font-size:11px; margin-left:4px;">0</span></button>
+            <button class="tab-btn" onclick="switchTab('account')" id="accountTabBtn">🔐 Account</button>
+        </div>
+
+        <!-- TAB: POST -->
+        <div id="post" class="tab-content active">
+            <div class="grid">
+                <div>
+                    <form onsubmit="handlePostMessage(event)" class="space-y-6">
+                        <div class="form-group">
+                            <label>📎 Post Type</label>
+                            <div class="media-type-group">
+                                <button type="button" class="media-type-btn active" id="typeText" onclick="switchMediaType('text')">📝 Text</button>
+                                <button type="button" class="media-type-btn" id="typePhoto" onclick="switchMediaType('photo')">🖼️ Photo</button>
+                                <button type="button" class="media-type-btn" id="typeVideo" onclick="switchMediaType('video')">🎬 Video</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                <label style="margin:0;">📍 Channels &amp; Groups <span id="selectedChannelCount" style="color:var(--text-muted); font-weight:normal; font-size:12px;">(none selected)</span></label>
+                                <div style="display:flex; gap:6px;">
+                                    <button type="button" class="btn btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="selectAllChannels(true)">✓ All</button>
+                                    <button type="button" class="btn btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="selectAllChannels(false)">✗ None</button>
+                                </div>
+                            </div>
+                            <div id="channelCheckboxList" style="max-height:220px; overflow-y:auto; background:rgba(15,23,42,0.5); border:1px solid rgba(168,85,247,0.2); border-radius:8px; padding:6px;">
+                                <div id="channelCheckboxEmpty" class="empty-state" style="padding:1.5rem;">
+                                    <div class="empty-state-icon" style="font-size:32px;">📭</div>
+                                    <p style="font-size:13px;">Add channels/groups or login to load automatically</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="fileUploadGroup" class="form-group" style="display: none;">
+                            <label id="fileLabel">🖼️ Select Photo</label>
+                            <div class="file-drop-zone" id="fileDropZone" onclick="document.getElementById('fileInput').click()">
+                                <div id="fileDropText" style="display: flex; flex-direction: column; align-items: center;">
+                                    <div style="font-size: 48px; margin-bottom: 8px;" id="fileDropIcon">📁</div>
+                                    <p style="color: var(--text-light); font-weight: 500;">Click or drag &amp; drop</p>
+                                    <p class="hint" id="fileHint">Supports: JPG, PNG, GIF, WebP</p>
+                                </div>
+                                <div id="filePreview" style="display: none; width: 100%; text-align: center;"></div>
+                            </div>
+                            <input type="file" id="fileInput" style="display: none;" accept="image/*" onchange="handleFileSelect(event)">
+                            <label style="display:flex; gap:8px; align-items:center; margin-top:10px; cursor:pointer; user-select:none;">
+                                <input type="checkbox" id="sendAsDocument" style="width:15px; height:15px; accent-color:var(--primary); cursor:pointer;">
+                                <span style="font-size:13px; color:var(--text-muted);">📄 Send as document (original quality, no compression)</span>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label id="messageLabel" style="display:flex; justify-content:space-between; align-items:center;">
+                                <span><span id="messageLabelText">✍️ Your Message</span> <span class="char-count" id="charCount">0 chars</span></span>
+                                <button type="button" id="btnAiCaption" onclick="toggleAiPanel()" style="padding:5px 12px; font-size:12px; border-radius:6px; border:1px solid rgba(168,85,247,0.5); background:rgba(168,85,247,0.15); color:var(--primary); cursor:pointer; white-space:nowrap;">✨ AI Caption</button>
+                            </label>
+                            <!-- AI Caption Panel -->
+                            <div id="aiCaptionPanel" style="display:none; background:rgba(168,85,247,0.08); border:1px solid rgba(168,85,247,0.3); border-radius:8px; padding:14px; margin-bottom:10px;">
+                                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+                                    <select id="aiTone" style="flex:1; min-width:130px; background:rgba(15,23,42,0.9); border:1px solid rgba(168,85,247,0.3); border-radius:6px; padding:8px 10px; color:var(--text-light); font-size:13px;">
+                                        <option value="engaging">🔥 Engaging</option>
+                                        <option value="casual">😊 Casual</option>
+                                        <option value="professional">💼 Professional</option>
+                                        <option value="funny">😂 Funny</option>
+                                        <option value="mysterious">🌙 Mysterious</option>
+                                        <option value="inspiring">💫 Inspiring</option>
+                                    </select>
+                                    <input type="text" id="aiLanguage" placeholder="Language" value="English" style="flex:1; min-width:100px;">
+                                </div>
+                                <input type="text" id="aiPrompt" placeholder="Optional: describe what this post is about..." style="margin-bottom:10px;">
+                                <button type="button" class="btn btn-block" id="btnGenerateCaption" onclick="generateAiCaption()">✨ Generate Caption</button>
+                            </div>
+                            <textarea id="messageContent" placeholder="Type your message..." onchange="updatePostUI()" oninput="updateCharCount()"></textarea>
+                            <div class="hint" id="messageHint">💡 You can use HTML: &lt;b&gt;bold&lt;/b&gt;, &lt;i&gt;italic&lt;/i&gt;, &lt;a href=""&gt;link&lt;/a&gt;</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>⚙️ Options</label>
+                            <div class="checkbox-group">
+                                <button type="button" class="checkbox-btn" id="btnSilent" onclick="toggleOption('silent')">🔇 Silent</button>
+                                <button type="button" class="checkbox-btn" id="btnSpoiler" onclick="toggleOption('spoiler')">👁️ Spoiler</button>
+                                <button type="button" class="checkbox-btn" id="btnPaid" onclick="toggleOption('paid')">⭐ Paid</button>
+                            </div>
+                            <button type="button" class="btn btn-secondary btn-block" style="margin-top:8px; font-size:13px;" onclick="randomizeOptions()">
+                                🎲 Random Option — Spoiler / Paid / Spoiler + Paid
+                            </button>
+                        </div>
+
+                        <div id="starsGroup" class="form-group" style="display:none;">
+                            <label>⭐ Stars Price</label>
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                                <button type="button" class="btn btn-secondary" style="padding:8px 14px; font-size:18px;" onclick="changeStars(-1)">−</button>
+                                <input type="number" id="starsCount" min="1" max="2500" value="10"
+                                    oninput="syncStarsPreview()"
+                                    style="flex:1; font-size:22px; font-weight:bold; text-align:center; padding:10px;">
+                                <button type="button" class="btn btn-secondary" style="padding:8px 14px; font-size:18px;" onclick="changeStars(1)">+</button>
+                            </div>
+                            <div style="display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap;">
+                                <button type="button" class="btn btn-secondary" style="padding:5px 12px; font-size:12px;" onclick="setStars(1)">⭐ 1</button>
+                                <button type="button" class="btn btn-secondary" style="padding:5px 12px; font-size:12px;" onclick="setStars(5)">⭐ 5</button>
+                                <button type="button" class="btn btn-secondary" style="padding:5px 12px; font-size:12px;" onclick="setStars(10)">⭐ 10</button>
+                                <button type="button" class="btn btn-secondary" style="padding:5px 12px; font-size:12px;" onclick="setStars(25)">⭐ 25</button>
+                                <button type="button" class="btn btn-secondary" style="padding:5px 12px; font-size:12px;" onclick="setStars(50)">⭐ 50</button>
+                                <button type="button" class="btn btn-secondary" style="padding:5px 12px; font-size:12px;" onclick="setStars(100)">⭐ 100</button>
+                            </div>
+                            <div style="background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.3); border-radius:8px; padding:10px;">
+                                <p style="font-size:13px; color:var(--text-light); margin-bottom:4px;">🔒 Post will appear locked — viewers tap <strong>"Pay ⭐ <span id="starsPreview">10</span> Stars"</strong> to unlock.</p>
+                                <p style="font-size:12px; color:var(--text-muted);">Min 1 · Max 2500 · Channel must have Stars monetization enabled</p>
+                            </div>
+                        </div>
+
+                        <div class="form-group" id="scheduleGroup" style="display: none;">
+                            <label>⏰ Schedule (Optional)</label>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <input type="datetime-local" id="scheduledTime" style="flex:1;">
+                                <button type="button" class="btn btn-secondary" style="padding:10px 14px; white-space:nowrap;" onclick="setRandomSchedule()">🎲 Random</button>
+                            </div>
+                            <div class="hint" id="scheduleHint">Leave empty to post immediately</div>
+                        </div>
+
+                        <button type="submit" class="btn btn-block" id="submitBtn">
+                            📤 Send Message
+                        </button>
+                    </form>
+                </div>
+
+                <div class="card" style="height: fit-content; position: sticky; top: 80px;">
+                    <h2>📊 Preview</h2>
+                    <div style="margin-top: 1rem; space-y: 1rem;">
+                        <div style="background: rgba(15, 23, 42, 0.5); padding: 12px; border-radius: 8px;">
+                            <p style="color: var(--text-muted); font-size: 12px;">Channel:</p>
+                            <p style="color: var(--primary); font-weight: 600; font-size: 14px;" id="previewChannel">Not selected</p>
+                        </div>
+                        <div style="background: rgba(15, 23, 42, 0.5); padding: 12px; border-radius: 8px;">
+                            <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px;">Active options:</p>
+                            <div id="previewOptions" style="font-size: 12px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: BULK POST -->
+        <div id="bulk" class="tab-content">
+            <div class="grid">
+                <!-- Left: settings -->
+                <div>
+                    <div class="card">
+                        <h2>📁 Bulk Post from Folder</h2>
+                        <p style="color:var(--text-muted); font-size:13px; margin-bottom:1rem;">Each sub-folder = 1 post. Put your media + a <code style="color:var(--primary);">.txt</code> caption file inside.</p>
+
+                        <!-- Folder structure example -->
+                        <div style="background:rgba(168,85,247,0.06); border:1px solid rgba(168,85,247,0.2); border-radius:8px; padding:10px 14px; margin-bottom:1.5rem; font-size:12px; line-height:2; color:var(--text-muted); font-family:monospace;">
+                            📂 MainFolder/<br>
+                            &nbsp;&nbsp;📁 001/ &nbsp;→&nbsp; photo.jpg &nbsp;+&nbsp; caption.txt<br>
+                            &nbsp;&nbsp;📁 002/ &nbsp;→&nbsp; video.mp4 &nbsp;+&nbsp; caption.txt<br>
+                            &nbsp;&nbsp;📁 003/ &nbsp;→&nbsp; image.png &nbsp;<em style="font-family:sans-serif;">(no caption)</em>
+                        </div>
+
+                        <!-- Folder picker -->
+                        <div class="form-group">
+                            <label>📂 Select Main Folder</label>
+                            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                                <input type="file" id="bulkFolderInput" webkitdirectory multiple style="display:none;" onchange="handleBulkFolderSelect(event)">
+                                <button type="button" class="btn" onclick="document.getElementById('bulkFolderInput').click()" style="white-space:nowrap;">📂 Browse Folder</button>
+                                <span id="bulkFolderName" style="color:var(--text-muted); font-size:13px;">No folder selected</span>
+                            </div>
+                        </div>
+
+                        <!-- Interval + Start time -->
+                        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                            <div class="form-group" style="flex:1; min-width:130px;">
+                                <label>⏱️ Interval (minutes)</label>
+                                <input type="number" id="bulkInterval" min="1" max="10080" value="1" oninput="renderBulkPreview()">
+                            </div>
+                            <div class="form-group" style="flex:2; min-width:200px;">
+                                <label>🕐 Start Time</label>
+                                <input type="datetime-local" id="bulkStartTime" oninput="renderBulkPreview()">
+                                <label style="display:flex; gap:6px; align-items:center; margin-top:8px; cursor:pointer; user-select:none;">
+                                    <input type="checkbox" id="bulkStartNow" onchange="toggleBulkStartNow()" style="width:15px; height:15px; accent-color:var(--primary); cursor:pointer;">
+                                    <span style="font-size:13px; color:var(--text-muted);">▶ Post first item immediately</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Channel selector -->
+                        <div class="form-group">
+                            <label>📍 Post To (Channels &amp; Groups)</label>
+                            <div id="bulkChannelList" style="max-height:160px; overflow-y:auto; background:rgba(15,23,42,0.5); border:1px solid rgba(168,85,247,0.2); border-radius:8px; padding:6px;">
+                                <p style="color:var(--text-muted); font-size:12px; padding:8px;">No channels — add them in the Channels tab</p>
+                            </div>
+                        </div>
+
+                        <!-- Per-post options hint -->
+                        <div style="background:rgba(168,85,247,0.06); border:1px solid rgba(168,85,247,0.2); border-radius:8px; padding:10px 14px; margin-bottom:1rem; font-size:12px; color:var(--text-muted); line-height:2;">
+                            ⚙️ <strong style="color:var(--text-light);">Per-post options via txt files:</strong><br>
+                            <span style="font-family:monospace; color:var(--primary);">star.txt</span> &nbsp;→&nbsp; ⭐ Paid (e.g. <code style="color:var(--primary);">25</code>)<br>
+                            <span style="font-family:monospace; color:var(--primary);">spoiler.txt</span> &nbsp;→&nbsp; 👁️ Spoiler<br>
+                            <span style="font-family:monospace; color:var(--primary);">silent.txt</span> &nbsp;→&nbsp; 🔇 Silent
+                        </div>
+
+                        <!-- Schedule button -->
+                        <button type="button" class="btn btn-block" id="bulkScheduleBtn" onclick="startBulkPost()" disabled style="margin-top:4px;">
+                            🚀 Schedule All Posts
+                        </button>
+
+                        <!-- Progress -->
+                        <div id="bulkProgress" style="display:none; margin-top:1rem;">
+                            <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(168,85,247,0.2); border-radius:8px; padding:14px;">
+                                <p id="bulkProgressText" style="font-size:13px; color:var(--text-light); margin-bottom:10px;">Scheduling...</p>
+                                <div style="background:rgba(168,85,247,0.15); border-radius:4px; height:8px; overflow:hidden;">
+                                    <div id="bulkProgressBar" style="height:100%; background:var(--primary); width:0%; transition:width 0.3s;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: preview -->
+                <div class="card" style="height:fit-content; position:sticky; top:80px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                        <h2>📋 Posts Preview <span id="bulkPostCount" style="color:var(--text-muted); font-size:13px; font-weight:normal;">(0)</span></h2>
+                    </div>
+                    <div id="bulkPreviewList" style="max-height:520px; overflow-y:auto;">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📭</div>
+                            <p>Select a folder to preview</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- TAB: CHANNELS -->
+        <div id="channels" class="tab-content">
+            <div class="grid">
+                <div class="card">
+                    <h2>➕ Add Channel or Group</h2>
+                    <p>Register a Telegram channel or group to post messages</p>
+                    <form onsubmit="handleAddChannel(event)">
+                        <div class="form-group">
+                            <label>Type</label>
+                            <div style="display:flex; gap:8px;">
+                                <button type="button" class="checkbox-btn active" id="typeChannelBtn" onclick="setNewChannelType('channel')">📢 Channel</button>
+                                <button type="button" class="checkbox-btn" id="typeGroupBtn" onclick="setNewChannelType('group')">👥 Group</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label id="newChannelIdLabel">Channel ID or Username</label>
+                            <input type="text" id="newChannelId" placeholder="@mychannel or -1001234567890">
+                            <div class="hint" id="newChannelIdHint">💡 @username or numeric ID (-100…) — NOT an invite link (t.me/+…). Log in via Account tab to auto-load all groups.</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Display Name</label>
+                            <input type="text" id="newChannelName" placeholder="My Awesome Channel">
+                        </div>
+                        <button type="submit" class="btn btn-block" id="addChannelBtn">
+                            ➕ Add Channel
+                        </button>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <h2>📋 Your Channels &amp; Groups</h2>
+                    <p id="channelStats">0 registered</p>
+                    <div id="channelsList" class="list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: SCHEDULED -->
+        <div id="scheduled" class="tab-content">
+            <div class="card">
+                <h2>⏰ Scheduled Messages</h2>
+                <p id="scheduledStats">0 messages scheduled</p>
+                <div id="scheduledList" class="list"></div>
+            </div>
+        </div>
+
+        <!-- TAB: LOG -->
+        <div id="log" class="tab-content">
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                    <div>
+                        <h2>📜 Post Log</h2>
+                        <p id="logStats" style="color:var(--text-muted); font-size:13px; margin-top:4px;">0 entries</p>
+                    </div>
+                    <button class="btn btn-danger" onclick="clearPostLog()" style="padding:8px 16px;">🗑️ Clear Log</button>
+                </div>
+                <div id="logList"></div>
+            </div>
+        </div>
+    </div>
+
+        <!-- TAB: ACCOUNT -->
+        <div id="account" class="tab-content">
+            <div class="grid">
+                <div class="card">
+                    <h2>🔐 Telegram Account Login</h2>
+                    <p>Log in with your account to post to any channel you admin — no bot needed.</p>
+
+                    <!-- Authenticated state -->
+                    <div id="authDone" style="display:none; text-align:center; padding: 2rem 0;">
+                        <div style="font-size:64px; margin-bottom:1rem;">✅</div>
+                        <h3 style="color:var(--success); margin-bottom:8px;">Connected!</h3>
+                        <p id="authUserInfo" style="color:var(--text-muted); margin-bottom:1.5rem;"></p>
+                        <div style="background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); border-radius:8px; padding:12px; margin-bottom:1.5rem;">
+                            <p style="font-size:13px; color:#86efac;">All posts now go through your account ✓</p>
+                        </div>
+                        <button class="btn btn-danger" onclick="logoutAccount()">🚪 Logout</button>
+                    </div>
+
+                    <!-- Auth steps -->
+                    <div id="authSteps">
+                        <!-- Step indicators -->
+                        <div style="display:flex; gap:8px; margin-bottom:1.5rem; align-items:center; font-size:13px;">
+                            <span class="step-badge active" id="step1Badge">1</span>
+                            <span style="color:var(--text-muted);">API Keys</span>
+                            <span style="color:var(--text-muted); margin:0 4px;">→</span>
+                            <span class="step-badge" id="step2Badge">2</span>
+                            <span style="color:var(--text-muted);">Phone</span>
+                            <span style="color:var(--text-muted); margin:0 4px;">→</span>
+                            <span class="step-badge" id="step3Badge">3</span>
+                            <span style="color:var(--text-muted);">Code</span>
+                        </div>
+
+                        <!-- Step 1: API credentials -->
+                        <div id="authStep1">
+                            <div style="background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.3); border-radius:8px; padding:12px; margin-bottom:1.5rem;">
+                                <p style="font-size:13px; color:var(--text-light); margin-bottom:6px;">📋 How to get API credentials:</p>
+                                <p style="font-size:12px; color:var(--text-muted); line-height:1.6;">
+                                    1. Open <strong style="color:var(--primary);">my.telegram.org</strong> in browser<br>
+                                    2. Log in with your phone number<br>
+                                    3. Click <strong>"API development tools"</strong><br>
+                                    4. Create an app → copy <strong>App api_id</strong> &amp; <strong>App api_hash</strong>
+                                </p>
+                            </div>
+                            <div class="form-group">
+                                <label>API ID</label>
+                                <input type="text" id="inputApiId" placeholder="e.g. 12345678">
+                            </div>
+                            <div class="form-group">
+                                <label>API Hash</label>
+                                <input type="text" id="inputApiHash" placeholder="32-character hex string">
+                            </div>
+                            <button class="btn btn-block" id="btnConnect" onclick="connectApi()">🔌 Connect</button>
+                        </div>
+
+                        <!-- Step 2: Phone number -->
+                        <div id="authStep2" style="display:none;">
+                            <div class="form-group">
+                                <label>📱 Phone Number</label>
+                                <input type="text" id="inputPhone" placeholder="+1234567890">
+                                <div class="hint">Include country code (e.g. +1 for US, +44 for UK)</div>
+                            </div>
+                            <div style="display:flex; gap:8px;">
+                                <button class="btn btn-secondary" onclick="showAuthStep(1)">← Back</button>
+                                <button class="btn" style="flex:1" id="btnSendCode" onclick="sendAuthCode()">📨 Send Code</button>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Verification code -->
+                        <div id="authStep3" style="display:none;">
+                            <p style="font-size:13px; color:var(--text-muted); margin-bottom:1rem;">📬 Check your Telegram app for the verification code</p>
+                            <div class="form-group">
+                                <label>Verification Code</label>
+                                <input type="text" id="inputCode" placeholder="12345" maxlength="10"
+                                    style="font-size:28px; text-align:center; letter-spacing:10px; font-weight:bold;">
+                            </div>
+                            <div style="display:flex; gap:8px;">
+                                <button class="btn btn-secondary" onclick="showAuthStep(2)">← Back</button>
+                                <button class="btn" style="flex:1" id="btnVerifyCode" onclick="verifyAuthCode()">✅ Verify</button>
+                            </div>
+                        </div>
+
+                        <!-- Step 4: 2FA password -->
+                        <div id="authStep4" style="display:none;">
+                            <p style="font-size:13px; color:var(--text-muted); margin-bottom:1rem;">🔒 Your account has two-factor authentication enabled</p>
+                            <div class="form-group">
+                                <label>Cloud Password</label>
+                                <input type="password" id="input2FA" placeholder="Your 2FA password">
+                            </div>
+                            <button class="btn btn-block" id="btnVerify2FA" onclick="verify2FA()">🔐 Confirm</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="height:fit-content;">
+                    <h2>ℹ️ Why Login?</h2>
+                    <p style="margin-bottom:1rem;">Using your Telegram account bypasses bot permission issues entirely.</p>
+                    <div style="background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); border-radius:8px; padding:12px; margin-bottom:1rem;">
+                        <p style="font-size:13px; color:#86efac; line-height:1.8;">
+                            ✅ Post as yourself<br>
+                            ✅ Any channel you're admin of<br>
+                            ✅ No bot needed in channel<br>
+                            ✅ Text, photo &amp; video<br>
+                            ✅ Session saved automatically
+                        </p>
+                    </div>
+                    <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:8px; padding:12px;">
+                        <p style="font-size:13px; color:#fca5a5; line-height:1.8;">
+                            ❌ Bot mode fails when:<br>
+                            • Bot not added to channel<br>
+                            • Bot lacks admin rights<br>
+                            → 403 Forbidden error
+                        </p>
+                    </div>
+                    <div id="authStatusBadge" style="display:none; margin-top:1rem; background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.4); border-radius:8px; padding:10px; text-align:center;">
+                        <p style="font-size:13px; color:#86efac;" id="authStatusText">✅ Logged in</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gemini AI Caption Settings -->
+            <div class="card" style="margin-top: 1.5rem;">
+                <h2>✨ AI Caption — Google Gemini</h2>
+                <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 14px;">Generate smart captions for your posts using Google Gemini AI. Free tier: 1,500 requests/day.</p>
+                <div style="background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.3); border-radius:8px; padding:12px; margin-bottom:1.5rem;">
+                    <p style="font-size:13px; color:var(--text-light); margin-bottom:6px;">📋 How to get a free Gemini API key:</p>
+                    <p style="font-size:12px; color:var(--text-muted); line-height:1.9;">
+                        1. Open <strong style="color:var(--primary);">aistudio.google.com</strong> in browser<br>
+                        2. Sign in with your Google account<br>
+                        3. Click <strong>"Get API key"</strong> → <strong>"Create API key in new project"</strong><br>
+                        4. Copy the key (starts with <code style="color:var(--primary);">AIza</code>) and paste below
+                    </p>
+                </div>
+                <div class="form-group">
+                    <label>Gemini API Key</label>
+                    <div style="display:flex; gap:8px;">
+                        <input type="password" id="inputGeminiKey" placeholder="AIzaSy...">
+                        <button class="btn" style="white-space:nowrap; padding:10px 18px;" onclick="saveGeminiKey()">💾 Save</button>
+                    </div>
+                    <div class="hint" id="geminiKeyStatus" style="margin-top:6px;"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>🤖 Telegram Bot Manager v1.0 • Made with ❤️</p>
+        <p style="margin-top: 8px;">Bot: @p0stagain_bot</p>
+    </div>
+
+    <script>
+        // Configuration
+        const API_URL = window.location.protocol === 'file:'
+            ? 'http://localhost:3000/api'
+            : `${window.location.origin}/api`;
+        let channels = [];
+        let scheduledMessages = [];
+        let newChannelType = 'channel';
+        const options = { silent: false, spoiler: false, paid: false };
+        let currentMediaType = 'text';
+        let selectedFile = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            checkServerStatus();
+            setInterval(checkServerStatus, 5000);
+            loadGeminiKeyStatus();
+            loadPostLog();
+
+            const zone = document.getElementById('fileDropZone');
+            zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drag-over'); });
+            zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                zone.classList.remove('drag-over');
+                const file = e.dataTransfer.files[0];
+                if (file) setSelectedFile(file);
+            });
+        });
+
+        // Check server status
+        async function checkServerStatus() {
+            try {
+                const res = await fetch(`${API_URL}/health`);
+                if (res.ok) {
+                    updateStatus('connected', 'Connected ✅');
+                    fetchChannels();
+                    fetchScheduledMessages();
+                    if (!authChecked) { authChecked = true; checkAuthStatus(); }
+                } else {
+                    updateStatus('disconnected', 'Server Error');
+                }
+            } catch (error) {
+                updateStatus('disconnected', 'Not Connected');
+            }
+        }
+
+        function updateStatus(status, text) {
+            const dot = document.getElementById('statusDot');
+            const txt = document.getElementById('statusText');
+            const alert = document.getElementById('alertBox');
+
+            if (status === 'connected') {
+                dot.className = 'status-dot connected';
+                alert.classList.add('hidden');
+            } else {
+                dot.className = 'status-dot disconnected';
+                alert.classList.remove('hidden');
+            }
+            txt.textContent = text;
+        }
+
+        // Fetch channels
+        async function fetchChannels() {
+            try {
+                const res = await fetch(`${API_URL}/channels`);
+                channels = await res.json();
+                updateChannelUI();
+            } catch (error) {
+                channels = [];
+            }
+        }
+
+        function chTypeIcon(ch) {
+            return ch.channelType === 'group' ? '👥' : '📢';
+        }
+
+        function updateChannelUI() {
+            // Persist channels so image-downloader.html can read them without the server
+            try { localStorage.setItem('tgBotChannels', JSON.stringify(channels)); } catch (_) {}
+            document.getElementById('channelCount').textContent = channels.length;
+
+            // Update channels management list (Channels tab)
+            const list = document.getElementById('channelsList');
+            if (channels.length === 0) {
+                list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div>No channels or groups added</div>';
+            } else {
+                list.innerHTML = channels.map(ch => `
+                    <div class="list-item">
+                        <div class="list-item-text">
+                            <div class="list-item-name">${chTypeIcon(ch)} ${ch.channelName}${ch.auto ? ' <span style="font-size:11px;color:var(--primary);">auto</span>' : ''}</div>
+                            <div class="list-item-id">${ch.channelId}</div>
+                        </div>
+                        <button onclick="deleteChannel(${ch.id}, '${ch.channelName}')" class="btn btn-danger" style="padding: 8px 12px;">🗑️</button>
+                    </div>
+                `).join('');
+            }
+            const chCount = channels.filter(c => c.channelType !== 'group').length;
+            const grCount = channels.filter(c => c.channelType === 'group').length;
+            const parts = [];
+            if (chCount) parts.push(`${chCount} channel${chCount !== 1 ? 's' : ''}`);
+            if (grCount) parts.push(`${grCount} group${grCount !== 1 ? 's' : ''}`);
+            document.getElementById('channelStats').textContent = parts.length ? parts.join(', ') + ' registered' : '0 registered';
+
+            // Update post form checkbox list
+            updateChannelCheckboxList();
+            updateBulkChannelList();
+        }
+
+        function updateChannelCheckboxList() {
+            const container = document.getElementById('channelCheckboxList');
+            const empty = document.getElementById('channelCheckboxEmpty');
+
+            if (channels.length === 0) {
+                empty.style.display = 'block';
+                container.innerHTML = '';
+                container.appendChild(empty);
+                updateSelectedCount();
+                return;
+            }
+
+            // Preserve currently checked state
+            const checked = new Set(
+                Array.from(document.querySelectorAll('input[name="channel"]:checked')).map(el => el.value)
+            );
+
+            container.innerHTML = channels.map(ch => {
+                const isChecked = checked.has(ch.channelId);
+                return `
+                    <label class="channel-check-item${isChecked ? ' checked' : ''}" id="lbl_${CSS.escape(ch.channelId)}">
+                        <input type="checkbox" name="channel" value="${ch.channelId}"
+                            ${isChecked ? 'checked' : ''}
+                            onchange="onChannelCheckChange(this)">
+                        <div style="flex:1; min-width:0;">
+                            <div style="color:var(--text-light); font-weight:500; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${chTypeIcon(ch)} ${ch.channelName}${ch.auto ? ' <span style="font-size:11px;color:var(--primary);">●</span>' : ''}</div>
+                            <div style="color:var(--text-muted); font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${ch.channelId}</div>
+                        </div>
+                    </label>`;
+            }).join('');
+
+            updateSelectedCount();
+        }
+
+        function onChannelCheckChange(cb) {
+            const label = cb.closest('label');
+            if (cb.checked) label.classList.add('checked');
+            else label.classList.remove('checked');
+            updateSelectedCount();
+            updatePostUI();
+        }
+
+        function updateSelectedCount() {
+            const n = document.querySelectorAll('input[name="channel"]:checked').length;
+            const el = document.getElementById('selectedChannelCount');
+            if (!el) return;
+            el.textContent = n === 0 ? '(none selected)' : `(${n} selected)`;
+        }
+
+        function selectAllChannels(select) {
+            document.querySelectorAll('input[name="channel"]').forEach(cb => {
+                cb.checked = select;
+                const label = cb.closest('label');
+                if (label) { if (select) label.classList.add('checked'); else label.classList.remove('checked'); }
+            });
+            updateSelectedCount();
+        }
+
+        // Fetch scheduled messages
+        async function fetchScheduledMessages() {
+            try {
+                const res = await fetch(`${API_URL}/scheduled`);
+                scheduledMessages = await res.json();
+                updateScheduledUI();
+            } catch (error) {
+                scheduledMessages = [];
+            }
+        }
+
+        function updateScheduledUI() {
+            document.getElementById('scheduledCount').textContent = scheduledMessages.length;
+            const list = document.getElementById('scheduledList');
+            if (scheduledMessages.length === 0) {
+                list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div>No scheduled messages</div>';
+            } else {
+                const typeIcon = { text: '📝', photo: '🖼️', video: '🎬' };
+                list.innerHTML = scheduledMessages.map(msg => {
+                    const icon = typeIcon[msg.type] || '📝';
+                    const preview = (msg.content || '').replace(/<[^>]*>/g, '').trim();
+                    return `
+                    <div class="list-item" style="flex-direction: column; align-items: flex-start;">
+                        <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                                <span class="badge">${icon} ${msg.type || 'text'}</span>
+                                <span class="badge">${msg.channelId}</span>
+                            </div>
+                            <button onclick="deleteScheduled(${msg.id})" class="btn btn-danger" style="padding: 6px 10px;">🗑️</button>
+                        </div>
+                        <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px;">⏰ ${new Date(msg.scheduledTime).toLocaleString()}</p>
+                        <div style="background: rgba(15, 23, 42, 0.5); padding: 8px; border-radius: 4px; font-size: 12px; color: var(--text-muted); max-width: 100%; width: 100%; max-height: 80px; overflow: hidden;">
+                            ${preview || '<em style="opacity:0.5;">No caption</em>'}
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+            document.getElementById('scheduledStats').textContent = `${scheduledMessages.length} message${scheduledMessages.length !== 1 ? 's' : ''} scheduled`;
+        }
+
+        // Add channel
+        function setNewChannelType(type) {
+            newChannelType = type;
+            document.getElementById('typeChannelBtn').classList.toggle('active', type === 'channel');
+            document.getElementById('typeGroupBtn').classList.toggle('active', type === 'group');
+            const isGroup = type === 'group';
+            document.getElementById('addChannelBtn').textContent = isGroup ? '➕ Add Group' : '➕ Add Channel';
+            document.getElementById('newChannelIdLabel').textContent = isGroup ? 'Group ID or Username' : 'Channel ID or Username';
+            document.getElementById('newChannelId').placeholder = isGroup ? '-1234567890 or @mygroup' : '@mychannel or -1001234567890';
+            document.getElementById('newChannelIdHint').textContent = isGroup
+                ? '💡 Numeric ID e.g. -1001234567890 or @username — NOT an invite link (t.me/+…)'
+                : '💡 @username or numeric ID (-100…) — log in via Account tab to auto-load all your groups';
+        }
+
+        async function handleAddChannel(e) {
+            e.preventDefault();
+            const id = document.getElementById('newChannelId').value.trim();
+            const name = document.getElementById('newChannelName').value.trim();
+
+            if (!id || !name) {
+                showToast('Please fill in all fields', 'error');
+                return;
+            }
+
+            // Reject invite-link hashes (e.g. +3Qr-2fck5GozMDVl from https://t.me/+…)
+            if (/^\+[A-Za-z0-9_\-]{5,}$/.test(id) && !/^\+\d{7,15}$/.test(id)) {
+                showToast('❌ That looks like an invite-link hash, not a valid ID.\nUse @username or the numeric ID (-100…)', 'error');
+                return;
+            }
+
+            document.getElementById('addChannelBtn').disabled = true;
+            try {
+                const res = await fetch(`${API_URL}/channels`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ channelId: id, channelName: name, channelType: newChannelType }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('newChannelId').value = '';
+                    document.getElementById('newChannelName').value = '';
+                    await fetchChannels();
+                    const label = newChannelType === 'group' ? 'Group' : 'Channel';
+                    showToast(`✅ ${label} "${name}" added!`);
+                } else {
+                    showToast(`❌ ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showToast(`❌ Error: ${error.message}`, 'error');
+            } finally {
+                document.getElementById('addChannelBtn').disabled = false;
+            }
+        }
+
+        // Delete channel
+        async function deleteChannel(id, name) {
+            if (!confirm(`Delete "${name}"?`)) return;
+            try {
+                await fetch(`${API_URL}/channels/${id}`, { method: 'DELETE' });
+                await fetchChannels();
+                showToast('✅ Channel deleted');
+            } catch (error) {
+                showToast(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Post message
+        async function handlePostMessage(e) {
+            e.preventDefault();
+            const content = document.getElementById('messageContent').value.trim();
+            const selectedChannels = Array.from(document.querySelectorAll('input[name="channel"]:checked')).map(el => el.value);
+
+            if (selectedChannels.length === 0) {
+                showToast('Please tick at least one channel', 'error');
+                return;
+            }
+            if (currentMediaType === 'text' && !content) {
+                showToast('Please type a message', 'error');
+                return;
+            }
+            if ((currentMediaType === 'photo' || currentMediaType === 'video') && !selectedFile) {
+                showToast(`Please select a ${currentMediaType} file`, 'error');
+                return;
+            }
+
+            document.getElementById('submitBtn').disabled = true;
+            try {
+                if (currentMediaType === 'text') {
+                    const isMulti = selectedChannels.length > 1;
+                    const endpoint = isMulti ? `${API_URL}/broadcast` : `${API_URL}/post`;
+                    const scheduledTime = document.getElementById('scheduledTime').value || null;
+                    const body = isMulti
+                        ? { channelIds: selectedChannels, content, hideWithSpoiler: options.spoiler, makeContentPaid: options.paid, sendWithoutSound: options.silent, scheduledTime }
+                        : { channelId: selectedChannels[0], content, hideWithSpoiler: options.spoiler, makeContentPaid: options.paid, sendWithoutSound: options.silent, scheduledTime };
+
+                    const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                    const data = await res.json();
+                    if (!data.success) throw new Error(data.error);
+
+                    const wasScheduled = scheduledTime;
+                    showToast(wasScheduled ? `⏰ Scheduled to ${isMulti ? selectedChannels.length + ' channels' : '1 channel'}!` : isMulti ? `✅ Sent to ${selectedChannels.length} channels!` : '✅ Message posted!');
+                    addLogEntry({ type: 'text', channelIds: selectedChannels, content, status: wasScheduled ? 'scheduled' : 'success', scheduledTime: wasScheduled || null });
+                    document.getElementById('messageContent').value = '';
+                    document.getElementById('scheduledTime').value = '';
+                    options.silent = false; options.spoiler = false; options.paid = false;
+                    selectAllChannels(false);
+                    updatePostUI();
+                    await fetchScheduledMessages();
+                } else {
+                    showToast(`⏳ Uploading ${currentMediaType}...`);
+                    const base64 = await fileToBase64(selectedFile);
+                    for (const chId of selectedChannels) {
+                        await sendMediaToChannel(chId, base64, selectedFile.type, content);
+                    }
+                    const label = currentMediaType === 'photo' ? 'Photo' : 'Video';
+                    const wasScheduled = document.getElementById('scheduledTime')?.value;
+                    showToast(wasScheduled ? `⏰ ${label} scheduled!` : selectedChannels.length > 1 ? `✅ ${label} sent to ${selectedChannels.length} channels!` : `✅ ${label} posted!`);
+                    addLogEntry({ type: currentMediaType, channelIds: selectedChannels, content, status: wasScheduled ? 'scheduled' : 'success', scheduledTime: wasScheduled || null, mediaName: selectedFile?.name });
+                    document.getElementById('messageContent').value = '';
+                    document.getElementById('scheduledTime').value = '';
+                    if (document.getElementById('sendAsDocument')) document.getElementById('sendAsDocument').checked = false;
+                    options.silent = false; options.spoiler = false; options.paid = false;
+                    document.getElementById('starsGroup').style.display = 'none';
+                    document.getElementById('starsCount').value = '10';
+                    selectAllChannels(false);
+                    resetFilePreview();
+                    updatePostUI();
+                    await fetchScheduledMessages();
+                }
+            } catch (error) {
+                let msg = error.message;
+                if (msg.includes('EXTENDED_MEDIA_PEER_INVALID')) msg = '❌ Channel does not support paid media. Disable ⭐ Paid or enable Stars monetization on your channel.';
+                showToast(msg, 'error');
+                const errChannels = Array.from(document.querySelectorAll('input[name="channel"]:checked')).map(el => el.value);
+                const errContent = document.getElementById('messageContent').value.trim();
+                addLogEntry({ type: currentMediaType, channelIds: errChannels, content: errContent, status: 'error', error: msg });
+                // Reset paid option so it doesn't get stuck on after an error
+                options.paid = false;
+                document.getElementById('btnPaid').classList.remove('active');
+                document.getElementById('starsGroup').style.display = 'none';
+            } finally {
+                document.getElementById('submitBtn').disabled = false;
+            }
+        }
+
+        // Media helpers
+        function switchMediaType(type) {
+            currentMediaType = type;
+            document.getElementById('typeText').classList.toggle('active', type === 'text');
+            document.getElementById('typePhoto').classList.toggle('active', type === 'photo');
+            document.getElementById('typeVideo').classList.toggle('active', type === 'video');
+
+            const fileGroup = document.getElementById('fileUploadGroup');
+            const fileInput = document.getElementById('fileInput');
+
+            if (type === 'text') {
+                fileGroup.style.display = 'none';
+                document.getElementById('messageLabelText').textContent = '✍️ Your Message';
+                document.getElementById('messageContent').placeholder = 'Type your message...';
+                document.getElementById('messageHint').innerHTML = '💡 You can use HTML: &lt;b&gt;bold&lt;/b&gt;, &lt;i&gt;italic&lt;/i&gt;, &lt;a href=""&gt;link&lt;/a&gt;';
+            } else if (type === 'photo') {
+                fileGroup.style.display = 'block';
+                document.getElementById('fileLabel').textContent = '🖼️ Select Photo';
+                document.getElementById('fileHint').textContent = 'Supports: JPG, PNG, GIF, WebP (max 10MB)';
+                document.getElementById('fileDropIcon').textContent = '🖼️';
+                fileInput.accept = 'image/*';
+                document.getElementById('messageLabelText').textContent = '✍️ Caption (optional)';
+                document.getElementById('messageContent').placeholder = 'Add a caption...';
+                document.getElementById('messageHint').innerHTML = '💡 Caption supports HTML formatting';
+            } else {
+                fileGroup.style.display = 'block';
+                document.getElementById('fileLabel').textContent = '🎬 Select Video';
+                document.getElementById('fileHint').textContent = 'Supports: MP4, MOV, AVI (max 50MB)';
+                document.getElementById('fileDropIcon').textContent = '🎬';
+                fileInput.accept = 'video/*';
+                document.getElementById('messageLabelText').textContent = '✍️ Caption (optional)';
+                document.getElementById('messageContent').placeholder = 'Add a caption...';
+                document.getElementById('messageHint').innerHTML = '💡 Caption supports HTML formatting';
+            }
+            resetFilePreview();
+            updatePostUI();
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) setSelectedFile(file);
+        }
+
+        function setSelectedFile(file) {
+            selectedFile = file;
+            document.getElementById('fileDropText').style.display = 'none';
+            const preview = document.getElementById('filePreview');
+            preview.style.display = 'block';
+            // Auto-generate an emoji caption after image loads
+            if (currentMediaType === 'photo' || currentMediaType === 'video') {
+                setTimeout(autoEmojiCaption, 400);
+            }
+
+            if (currentMediaType === 'photo') {
+                const url = URL.createObjectURL(file);
+                preview.innerHTML = `
+                    <img src="${url}" alt="preview">
+                    <p style="margin-top:8px;font-size:12px;color:var(--text-muted);">${file.name} (${formatFileSize(file.size)})</p>
+                    <button type="button" class="remove-file-btn" onclick="resetFilePreview()">✕ Remove</button>`;
+            } else {
+                preview.innerHTML = `
+                    <div style="font-size:48px;margin-bottom:8px;">🎬</div>
+                    <p style="color:var(--text-light);font-weight:500;">${file.name}</p>
+                    <p style="font-size:12px;color:var(--text-muted);margin-top:4px;">${formatFileSize(file.size)}</p>
+                    <button type="button" class="remove-file-btn" onclick="resetFilePreview()">✕ Remove</button>`;
+            }
+        }
+
+        function resetFilePreview() {
+            selectedFile = null;
+            document.getElementById('filePreview').style.display = 'none';
+            document.getElementById('fileDropText').style.display = 'flex';
+            document.getElementById('fileInput').value = '';
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function sendMediaToChannel(channelId, base64, mimeType, caption) {
+            const endpoint = currentMediaType === 'photo' ? `${API_URL}/post-photo` : `${API_URL}/post-video`;
+            const scheduledTime = document.getElementById('scheduledTime')?.value || null;
+            const forceDocument = document.getElementById('sendAsDocument')?.checked || false;
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    channelId,
+                    base64,
+                    mimeType,
+                    caption: caption || undefined,
+                    sendWithoutSound: options.silent,
+                    hideWithSpoiler: options.spoiler,
+                    makeContentPaid: options.paid,
+                    starsCount: options.paid ? (parseInt(document.getElementById('starsCount')?.value) || 10) : 0,
+                    scheduledTime: scheduledTime || null,
+                    forceDocument,
+                }),
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+            return data;
+        }
+
+        // Delete scheduled
+        async function deleteScheduled(id) {
+            if (!confirm('Cancel this scheduled message?')) return;
+            try {
+                await fetch(`${API_URL}/scheduled/${id}`, { method: 'DELETE' });
+                await fetchScheduledMessages();
+                showToast('✅ Message cancelled');
+            } catch (error) {
+                showToast(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // UI Helpers
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tab).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function toggleOption(option) {
+            options[option] = !options[option];
+            const btnIds = { silent: 'btnSilent', spoiler: 'btnSpoiler', paid: 'btnPaid' };
+            document.getElementById(btnIds[option]).classList.toggle('active', options[option]);
+            if (option === 'paid') {
+                document.getElementById('starsGroup').style.display = options.paid ? 'block' : 'none';
+                if (!options.paid) { document.getElementById('starsCount').value = '10'; syncStarsPreview(); }
+            }
+            updatePostUI();
+        }
+
+        function changeStars(delta) {
+            const input = document.getElementById('starsCount');
+            const val = Math.min(2500, Math.max(1, (parseInt(input.value) || 10) + delta));
+            input.value = val;
+            syncStarsPreview();
+        }
+
+        function setStars(n) {
+            document.getElementById('starsCount').value = n;
+            syncStarsPreview();
+        }
+
+        function syncStarsPreview() {
+            const n = parseInt(document.getElementById('starsCount')?.value) || 10;
+            const el = document.getElementById('starsPreview');
+            if (el) el.textContent = n;
+        }
+
+        function updatePostUI() {
+            const n = document.querySelectorAll('input[name="channel"]:checked').length;
+
+            // Submit button label
+            const icons  = { text: '📤', photo: '🖼️', video: '🎬' };
+            const labels = { text: 'Message', photo: 'Photo', video: 'Video' };
+            const action = n > 1 ? 'Broadcast' : 'Post';
+            document.getElementById('submitBtn').innerHTML = `${icons[currentMediaType]} ${action} ${labels[currentMediaType]}`;
+
+            // Schedule available whenever at least one channel is selected
+            document.getElementById('scheduleGroup').style.display = n >= 1 ? 'block' : 'none';
+
+            // Option buttons
+            document.getElementById('btnSilent').classList.toggle('active', options.silent);
+            document.getElementById('btnSpoiler').classList.toggle('active', options.spoiler);
+            document.getElementById('btnPaid').classList.toggle('active', options.paid);
+
+            // Preview — use value comparison, not CSS selector
+            const checkedIds = new Set(Array.from(document.querySelectorAll('input[name="channel"]:checked')).map(el => el.value));
+            const firstChecked = channels.find(c => checkedIds.has(c.channelId));
+            document.getElementById('previewChannel').textContent = n === 0 ? 'Not selected'
+                : n === 1 ? (firstChecked?.channelName || '1 channel')
+                : `${n} channels`;
+
+            const opts = [];
+            if (options.silent)  opts.push('🔇 Silent');
+            if (options.spoiler) opts.push('👁️ Spoiler');
+            if (options.paid)    opts.push('💰 Paid');
+            document.getElementById('previewOptions').innerHTML = opts.length
+                ? opts.map(o => `<div class="badge">${o}</div>`).join('')
+                : '<p style="color:var(--text-muted); font-size:12px;">No special options</p>';
+        }
+
+        function updateCharCount() {
+            const count = document.getElementById('messageContent').value.length;
+            document.getElementById('charCount').textContent = `${count} chars`;
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type === 'error' ? 'error' : ''}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        // ============================================
+        // ACCOUNT AUTH
+        // ============================================
+        let authChecked = false;
+
+        async function checkAuthStatus() {
+            try {
+                const res = await fetch(`${API_URL}/auth/status`);
+                const data = await res.json();
+                if (data.authenticated) showAuthSuccess(data.user, false);
+            } catch (_) {}
+        }
+
+        async function connectApi() {
+            const apiId   = document.getElementById('inputApiId').value.trim();
+            const apiHash = document.getElementById('inputApiHash').value.trim();
+            if (!apiId || !apiHash) { showToast('Enter API ID and API Hash', 'error'); return; }
+
+            const btn = document.getElementById('btnConnect');
+            btn.disabled = true;
+            btn.textContent = '⏳ Connecting...';
+            try {
+                const res  = await fetch(`${API_URL}/auth/connect`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apiId, apiHash }) });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
+                if (data.authenticated) {
+                    showAuthSuccess(data.user);
+                } else {
+                    showAuthStep(2);
+                    showToast('Connected! Now enter your phone number.');
+                }
+            } catch (err) {
+                showToast(`❌ ${err.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔌 Connect';
+            }
+        }
+
+        async function sendAuthCode() {
+            const phone = document.getElementById('inputPhone').value.trim();
+            if (!phone) { showToast('Enter your phone number', 'error'); return; }
+
+            const btn = document.getElementById('btnSendCode');
+            btn.disabled = true;
+            btn.textContent = '⏳ Sending...';
+            try {
+                const res  = await fetch(`${API_URL}/auth/send-code`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
+                showToast('✅ Code sent to your Telegram app!');
+                showAuthStep(3);
+                setTimeout(() => document.getElementById('inputCode').focus(), 100);
+            } catch (err) {
+                showToast(`❌ ${err.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '📨 Send Code';
+            }
+        }
+
+        async function verifyAuthCode() {
+            const code = document.getElementById('inputCode').value.trim();
+            if (!code) { showToast('Enter the verification code', 'error'); return; }
+
+            const btn = document.getElementById('btnVerifyCode');
+            btn.disabled = true;
+            btn.textContent = '⏳ Verifying...';
+            try {
+                const res  = await fetch(`${API_URL}/auth/verify-code`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
+                if (data.needs2FA) {
+                    showAuthStep(4);
+                    showToast('Enter your 2FA password');
+                    setTimeout(() => document.getElementById('input2FA').focus(), 100);
+                } else {
+                    showAuthSuccess(data.user);
+                }
+            } catch (err) {
+                showToast(`❌ ${err.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '✅ Verify';
+            }
+        }
+
+        async function verify2FA() {
+            const password = document.getElementById('input2FA').value;
+            if (!password) { showToast('Enter your 2FA password', 'error'); return; }
+
+            const btn = document.getElementById('btnVerify2FA');
+            btn.disabled = true;
+            btn.textContent = '⏳ Verifying...';
+            try {
+                const res  = await fetch(`${API_URL}/auth/verify-2fa`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
+                showAuthSuccess(data.user);
+            } catch (err) {
+                showToast(`❌ ${err.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔐 Confirm';
+            }
+        }
+
+        async function logoutAccount() {
+            if (!confirm('Logout from your Telegram account?')) return;
+            try {
+                await fetch(`${API_URL}/auth/logout`, { method: 'POST' });
+                // Remove auto-loaded channels
+                channels = channels.filter(c => !c.auto);
+                updateChannelUI();
+                document.getElementById('authDone').style.display = 'none';
+                document.getElementById('authSteps').style.display = 'block';
+                showAuthStep(1);
+                document.getElementById('authStatusBadge').style.display = 'none';
+                document.getElementById('accountTabBtn').textContent = '🔐 Account';
+                showToast('✅ Logged out');
+            } catch (err) {
+                showToast(`❌ ${err.message}`, 'error');
+            }
+        }
+
+        function showAuthStep(step) {
+            ['authStep1', 'authStep2', 'authStep3', 'authStep4'].forEach((id, i) => {
+                document.getElementById(id).style.display = (i + 1 === step) ? 'block' : 'none';
+            });
+            for (let i = 1; i <= 3; i++) {
+                const badge = document.getElementById(`step${i}Badge`);
+                if (i < step)      { badge.className = 'step-badge done';   badge.textContent = '✓'; }
+                else if (i === step){ badge.className = 'step-badge active'; badge.textContent = i;   }
+                else               { badge.className = 'step-badge';        badge.textContent = i;   }
+            }
+        }
+
+        function showAuthSuccess(user, showToastMsg = true) {
+            document.getElementById('authDone').style.display = 'block';
+            document.getElementById('authSteps').style.display = 'none';
+            const name = [user.firstName, user.lastName].filter(Boolean).join(' ');
+            const username = user.username ? ` (@${user.username})` : '';
+            document.getElementById('authUserInfo').textContent = `${name}${username}`;
+            document.getElementById('authStatusBadge').style.display = 'block';
+            document.getElementById('authStatusText').textContent = `✅ Logged in as ${name}`;
+            document.getElementById('accountTabBtn').textContent = `✅ ${name}`;
+            if (showToastMsg) showToast(`✅ Logged in as ${name}!`);
+            fetchMyChannels();
+        }
+
+        async function fetchMyChannels() {
+            try {
+                const res = await fetch(`${API_URL}/auth/my-channels`);
+                if (!res.ok) return;
+                const myChannels = await res.json();
+                if (!Array.isArray(myChannels) || myChannels.length === 0) return;
+
+                // Merge into channelList, skip duplicates
+                let added = 0;
+                myChannels.forEach(ch => {
+                    const exists = channels.find(c => c.channelId === ch.channelId);
+                    if (!exists) {
+                        channels.push({ id: Date.now() + Math.random(), channelId: ch.channelId, channelName: ch.channelName, channelType: ch.channelType || 'channel', auto: true });
+                        added++;
+                    }
+                });
+
+                updateChannelUI();
+                if (added > 0) showToast(`📋 ${added} channel${added > 1 ? 's' : ''} loaded from your account`);
+            } catch (_) {}
+        }
+
+        // ============================================
+        // BULK POST
+        // ============================================
+        let bulkPosts = [];
+
+        function updateBulkChannelList() {
+            const container = document.getElementById('bulkChannelList');
+            if (!container) return;
+            if (channels.length === 0) {
+                container.innerHTML = '<p style="color:var(--text-muted); font-size:12px; padding:8px;">No channels — add them in the Channels tab</p>';
+                return;
+            }
+            const checked = new Set(Array.from(document.querySelectorAll('input[name="bulkChannel"]:checked')).map(el => el.value));
+            container.innerHTML = channels.map(ch => {
+                const isCk = checked.has(ch.channelId);
+                return `<label class="channel-check-item${isCk ? ' checked' : ''}" style="padding:6px 10px;">
+                    <input type="checkbox" name="bulkChannel" value="${ch.channelId}" ${isCk ? 'checked' : ''} onchange="onBulkChannelChange(this)">
+                    <div style="flex:1; min-width:0; font-size:13px; color:var(--text-light); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${chTypeIcon(ch)} ${ch.channelName}</div>
+                </label>`;
+            }).join('');
+        }
+
+        function onBulkChannelChange(cb) {
+            const label = cb.closest('label');
+            if (cb.checked) label.classList.add('checked'); else label.classList.remove('checked');
+            const n = document.querySelectorAll('input[name="bulkChannel"]:checked').length;
+            const btn = document.getElementById('bulkScheduleBtn');
+            if (btn) btn.disabled = !(n > 0 && bulkPosts.length > 0);
+        }
+
+        function toggleBulkStartNow() {
+            const now = document.getElementById('bulkStartNow').checked;
+            document.getElementById('bulkStartTime').disabled = now;
+            if (now) document.getElementById('bulkStartTime').value = '';
+            renderBulkPreview();
+        }
+
+        async function handleBulkFolderSelect(event) {
+            const files = Array.from(event.target.files);
+            if (files.length === 0) return;
+
+            const rootName = files[0].webkitRelativePath.split('/')[0];
+            document.getElementById('bulkFolderName').textContent = `📂 ${rootName}  (${files.length} files found)`;
+
+            const IMAGE_EXT = new Set(['jpg','jpeg','png','gif','webp']);
+            const VIDEO_EXT = new Set(['mp4','mov','avi','mkv','webm']);
+            const subMap = {};
+
+            files.forEach(file => {
+                const parts = file.webkitRelativePath.split('/');
+                if (parts.length < 3) return; // need root/subfolder/file
+                const sub = parts[1];
+                if (!subMap[sub]) subMap[sub] = { media: [], textFile: null, starFile: null, spoilerFile: null, silentFile: null };
+                const ext = file.name.split('.').pop().toLowerCase();
+                if (IMAGE_EXT.has(ext)) subMap[sub].media.push({ file, mediaType: 'photo' });
+                else if (VIDEO_EXT.has(ext)) subMap[sub].media.push({ file, mediaType: 'video' });
+                else if (ext === 'txt') {
+                    const fn = file.name.toLowerCase();
+                    if (fn === 'star.txt')    subMap[sub].starFile    = file;
+                    else if (fn === 'spoiler.txt') subMap[sub].spoilerFile = file;
+                    else if (fn === 'silent.txt')  subMap[sub].silentFile  = file;
+                    else if (!subMap[sub].textFile) subMap[sub].textFile = file;
+                }
+            });
+
+            bulkPosts = Object.entries(subMap)
+                .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
+                .filter(([, v]) => v.media.length > 0)
+                .map(([folderName, v]) => {
+                    const photos = v.media.filter(m => m.mediaType === 'photo').slice(0, 3);
+                    const video  = v.media.find(m => m.mediaType === 'video') || null;
+                    const isPhoto = photos.length > 0;
+                    return {
+                        folderName,
+                        mediaType:  isPhoto ? 'photo' : 'video',
+                        mediaFiles: isPhoto ? photos : (video ? [video] : []),
+                        textFile:    v.textFile    || null,
+                        starFile:    v.starFile    || null,
+                        spoilerFile: v.spoilerFile || null,
+                        silentFile:  v.silentFile  || null,
+                    };
+                })
+                .filter(p => p.mediaFiles.length > 0);
+
+            renderBulkPreview();
+            const n = document.querySelectorAll('input[name="bulkChannel"]:checked').length;
+            const btn = document.getElementById('bulkScheduleBtn');
+            if (btn) btn.disabled = !(n > 0 && bulkPosts.length > 0);
+        }
+
+        async function renderBulkPreview() {
+            const list = document.getElementById('bulkPreviewList');
+            const countEl = document.getElementById('bulkPostCount');
+            if (!list) return;
+            if (countEl) countEl.textContent = `(${bulkPosts.length})`;
+
+            if (bulkPosts.length === 0) {
+                list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No valid sub-folders found</p></div>';
+                return;
+            }
+
+            const intervalMin = parseInt(document.getElementById('bulkInterval')?.value || '1') || 1;
+            const startNow = document.getElementById('bulkStartNow')?.checked;
+            const startVal = document.getElementById('bulkStartTime')?.value;
+
+            const rows = await Promise.all(bulkPosts.map(async (p, i) => {
+                let captionPreview = '';
+                if (p.textFile) {
+                    try { captionPreview = (await p.textFile.text()).trim().slice(0, 120); } catch (_) {}
+                }
+                let starPreview = '';
+                if (p.starFile) {
+                    try { starPreview = (await p.starFile.text()).trim().replace(/[^0-9]/g, ''); } catch (_) {}
+                }
+                const hasSpoiler = !!p.spoilerFile;
+                const hasSilent  = !!p.silentFile;
+
+                let timeLabel = '';
+                if (startNow && i === 0) {
+                    timeLabel = '▶ Now';
+                } else if (startNow) {
+                    const mins = i * intervalMin;
+                    timeLabel = mins >= 60 ? `+${(mins/60).toFixed(1)}h` : `+${mins}m`;
+                } else if (startVal) {
+                    const t = new Date(new Date(startVal).getTime() + i * intervalMin * 60000);
+                    timeLabel = t.toLocaleString();
+                }
+
+                const icon = p.mediaType === 'video' ? '🎬' : '🖼️';
+                const photoCount = p.mediaType === 'photo' && p.mediaFiles.length > 1 ? ` ×${p.mediaFiles.length}` : '';
+                const mediaFilesLabel = p.mediaType === 'photo' && p.mediaFiles.length > 1
+                    ? `${p.mediaFiles.length} photos`
+                    : (p.mediaFiles[0]?.file.name || '');
+                return `
+                <div style="background:rgba(15,23,42,0.45); border:1px solid rgba(168,85,247,0.15); border-radius:8px; padding:10px 12px; margin-bottom:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px;">
+                        <span style="font-weight:600; font-size:13px; color:var(--text-light);">📁 ${p.folderName}</span>
+                        <div style="display:flex; gap:6px; align-items:center;">
+                            <span class="badge">${icon} ${p.mediaType}${photoCount}</span>
+                            ${timeLabel ? `<span style="font-size:11px; color:var(--warning); white-space:nowrap;">⏰ ${timeLabel}</span>` : ''}
+                        </div>
+                    </div>
+                    <div style="font-size:11px; color:var(--text-muted);">
+                        📎 ${mediaFilesLabel}${p.textFile ? ` · 📄 ${p.textFile.name}` : ' · <em>no caption</em>'}
+                    </div>
+                    ${(starPreview || hasSpoiler || hasSilent) ? `<div style="display:flex; gap:5px; margin-top:5px; flex-wrap:wrap;">
+                        ${starPreview ? `<span class="badge" style="color:#f59e0b;">⭐ ${starPreview} Stars</span>` : ''}
+                        ${hasSpoiler  ? `<span class="badge">👁️ Spoiler</span>` : ''}
+                        ${hasSilent   ? `<span class="badge">🔇 Silent</span>` : ''}
+                    </div>` : ''}
+                    ${captionPreview ? `<div style="margin-top:6px; background:rgba(15,23,42,0.6); border-radius:4px; padding:5px 8px; font-size:11px; color:var(--text-muted); white-space:pre-wrap; max-height:36px; overflow:hidden;">${captionPreview}${captionPreview.length >= 120 ? '…' : ''}</div>` : ''}
+                </div>`;
+            }));
+
+            list.innerHTML = rows.join('');
+        }
+
+        async function startBulkPost() {
+            const selectedChannels = Array.from(document.querySelectorAll('input[name="bulkChannel"]:checked')).map(el => el.value);
+            if (selectedChannels.length === 0) { showToast('Select at least one channel/group', 'error'); return; }
+            if (bulkPosts.length === 0) { showToast('No posts to schedule', 'error'); return; }
+
+            const intervalMin = parseInt(document.getElementById('bulkInterval').value) || 1;
+            const startNow = document.getElementById('bulkStartNow').checked;
+            const startVal = document.getElementById('bulkStartTime').value;
+            if (!startNow && !startVal) { showToast('Set a start time or check "Post first immediately"', 'error'); return; }
+
+            const btn = document.getElementById('bulkScheduleBtn');
+            const progressDiv = document.getElementById('bulkProgress');
+            const progressText = document.getElementById('bulkProgressText');
+            const progressBar = document.getElementById('bulkProgressBar');
+
+            btn.disabled = true;
+            progressDiv.style.display = 'block';
+            progressBar.style.width = '0%';
+
+            // Format as LOCAL datetime string (no UTC conversion) so server parses it correctly
+            const toLocalStr = d => {
+                const p = n => String(n).padStart(2, '0');
+                return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+            };
+
+            const baseTime = startNow ? Date.now() : new Date(startVal).getTime();
+            let done = 0, errors = 0;
+            const errorDetails = [];
+
+            for (let i = 0; i < bulkPosts.length; i++) {
+                const post = bulkPosts[i];
+                progressText.textContent = `⏳ Uploading ${i + 1} / ${bulkPosts.length}: 📁 ${post.folderName}`;
+                progressBar.style.width = `${Math.round((i / bulkPosts.length) * 100)}%`;
+
+                // Scheduled time — use local string to avoid UTC timezone shift
+                let scheduledTimeStr = null;
+                const offsetMs = i * intervalMin * 60 * 1000;
+                if (!(startNow && i === 0)) {
+                    scheduledTimeStr = toLocalStr(new Date(baseTime + offsetMs));
+                }
+
+                // Read caption
+                let caption = '';
+                if (post.textFile) {
+                    try { caption = (await post.textFile.text()).trim(); } catch (_) {}
+                }
+
+                // Per-post options from txt files
+                let postStars = 0;
+                if (post.starFile) {
+                    try {
+                        const v = parseInt((await post.starFile.text()).trim());
+                        if (!isNaN(v) && v >= 1 && v <= 2500) postStars = v;
+                    } catch (_) {}
+                }
+                const postSpoiler = !!post.spoilerFile;
+                const postSilent  = !!post.silentFile;
+
+                // Convert media and post
+                let postErr = null;
+                try {
+                    if (post.mediaType === 'photo' && post.mediaFiles.length > 1) {
+                        // Multiple photos → send as album (media group)
+                        const photoData = await Promise.all(post.mediaFiles.map(async m => ({
+                            base64: await fileToBase64(m.file),
+                            mimeType: m.file.type || 'image/jpeg',
+                        })));
+                        for (const chId of selectedChannels) {
+                            try {
+                                const res = await fetch(`${API_URL}/post-media-group`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        channelId: chId,
+                                        photos: photoData,
+                                        caption: caption || undefined,
+                                        scheduledTime: scheduledTimeStr,
+                                        sendWithoutSound: postSilent,
+                                        makeContentPaid: postStars > 0,
+                                        starsCount: postStars,
+                                    }),
+                                });
+                                const data = await res.json();
+                                if (!data.success) throw new Error(data.error || 'Unknown error');
+                            } catch (err) { postErr = err.message; }
+                        }
+                    } else {
+                        // Single photo or video
+                        const mediaItem = post.mediaFiles[0];
+                        const base64 = await fileToBase64(mediaItem.file);
+                        const mimeType = mediaItem.file.type || (post.mediaType === 'photo' ? 'image/jpeg' : 'video/mp4');
+                        const endpoint = post.mediaType === 'photo' ? `${API_URL}/post-photo` : `${API_URL}/post-video`;
+                        for (const chId of selectedChannels) {
+                            try {
+                                const res = await fetch(endpoint, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        channelId: chId,
+                                        base64,
+                                        mimeType,
+                                        caption: caption || undefined,
+                                        scheduledTime: scheduledTimeStr,
+                                        sendWithoutSound: postSilent,
+                                        hideWithSpoiler: postSpoiler,
+                                        makeContentPaid: postStars > 0,
+                                        starsCount: postStars,
+                                        forceDocument: false,
+                                    }),
+                                });
+                                const data = await res.json();
+                                if (!data.success) throw new Error(data.error || 'Unknown error');
+                            } catch (err) { postErr = err.message; }
+                        }
+                    }
+                } catch (err) {
+                    postErr = err.message;
+                }
+
+                const firstMediaName = post.mediaFiles[0]?.file.name;
+                if (postErr) {
+                    errors++;
+                    errorDetails.push(`📁 ${post.folderName}: ${postErr}`);
+                    addLogEntry({ type: post.mediaType, channelIds: selectedChannels, content: caption, status: 'error', error: postErr, mediaName: firstMediaName });
+                } else {
+                    done++;
+                    addLogEntry({ type: post.mediaType, channelIds: selectedChannels, content: caption, status: scheduledTimeStr ? 'scheduled' : 'success', scheduledTime: scheduledTimeStr, mediaName: firstMediaName });
+                }
+            }
+
+            progressBar.style.width = '100%';
+            if (errors === 0) {
+                progressText.innerHTML = `✅ Done! <strong>${done}</strong> post${done !== 1 ? 's' : ''} scheduled successfully.`;
+            } else {
+                const errSummary = errorDetails.slice(0, 3).map(e => `<div style="margin-top:4px; font-size:11px; color:var(--error);">⚠️ ${e}</div>`).join('');
+                const more = errorDetails.length > 3 ? `<div style="font-size:11px; color:var(--text-muted); margin-top:4px;">+ ${errorDetails.length - 3} more — check 📜 Log tab</div>` : `<div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Check 📜 Log tab for details</div>`;
+                progressText.innerHTML = `✅ ${done} scheduled &nbsp;·&nbsp; ❌ ${errors} failed${errSummary}${more}`;
+            }
+            await fetchScheduledMessages();
+            showToast(errors === 0 ? `✅ ${done} posts scheduled!` : `⚠️ ${done} ok · ${errors} failed — check 📜 Log`, errors > 0 ? 'error' : 'success');
+            btn.disabled = false;
+        }
+
+        // ============================================
+        // POST LOG
+        // ============================================
+        let postLog = [];
+        const LOG_KEY = 'tgBotPostLog';
+        const LOG_MAX = 200;
+
+        function loadPostLog() {
+            try {
+                postLog = JSON.parse(localStorage.getItem(LOG_KEY) || '[]');
+            } catch (_) { postLog = []; }
+            renderPostLog();
+            updateLogBadge();
+        }
+
+        function savePostLog() {
+            try { localStorage.setItem(LOG_KEY, JSON.stringify(postLog)); } catch (_) {}
+        }
+
+        function addLogEntry({ type, channelIds, content, status, scheduledTime, error, mediaName }) {
+            const entry = {
+                id: Date.now(),
+                time: new Date().toISOString(),
+                type: type || 'text',
+                channelIds: channelIds || [],
+                channelNames: (channelIds || []).map(id => {
+                    const ch = channels.find(c => c.channelId === id);
+                    return ch ? { name: ch.channelName, type: ch.channelType || 'channel' } : { name: id, type: 'channel' };
+                }),
+                content: (content || '').replace(/<[^>]*>/g, '').trim().slice(0, 200),
+                status,
+                scheduledTime: scheduledTime || null,
+                error: error || null,
+                mediaName: mediaName || null,
+            };
+            postLog.unshift(entry);
+            if (postLog.length > LOG_MAX) postLog = postLog.slice(0, LOG_MAX);
+            savePostLog();
+            renderPostLog();
+            updateLogBadge();
+        }
+
+        function updateLogBadge() {
+            const badge = document.getElementById('logBadge');
+            if (!badge) return;
+            if (postLog.length > 0) {
+                badge.style.display = 'inline';
+                badge.textContent = postLog.length;
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        function clearPostLog() {
+            if (!confirm('Clear all post log entries?')) return;
+            postLog = [];
+            savePostLog();
+            renderPostLog();
+            updateLogBadge();
+        }
+
+        function relativeTime(iso) {
+            const diff = Date.now() - new Date(iso).getTime();
+            const s = Math.floor(diff / 1000);
+            if (s < 60) return `${s}s ago`;
+            const m = Math.floor(s / 60);
+            if (m < 60) return `${m}m ago`;
+            const h = Math.floor(m / 60);
+            if (h < 24) return `${h}h ago`;
+            return new Date(iso).toLocaleDateString();
+        }
+
+        function renderPostLog() {
+            const list = document.getElementById('logList');
+            const stats = document.getElementById('logStats');
+            if (!list) return;
+
+            const total = postLog.length;
+            const ok = postLog.filter(e => e.status === 'success').length;
+            const sched = postLog.filter(e => e.status === 'scheduled').length;
+            const err = postLog.filter(e => e.status === 'error').length;
+            if (stats) {
+                stats.innerHTML = `${total} entries &nbsp;·&nbsp; <span style="color:var(--success);">✅ ${ok}</span> &nbsp;·&nbsp; <span style="color:var(--warning);">⏰ ${sched}</span> &nbsp;·&nbsp; <span style="color:var(--error);">❌ ${err}</span>`;
+            }
+
+            if (total === 0) {
+                list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div>No posts yet</div>';
+                return;
+            }
+
+            const typeIcon = { text: '📝', photo: '🖼️', video: '🎬' };
+            const statusColor = { success: 'var(--success)', scheduled: 'var(--warning)', error: 'var(--error)' };
+            const statusLabel = { success: '✅ Sent', scheduled: '⏰ Scheduled', error: '❌ Failed' };
+
+            list.innerHTML = postLog.map(e => {
+                const chipsHtml = e.channelNames.map(c =>
+                    `<span class="badge">${c.type === 'group' ? '👥' : '📢'} ${c.name}</span>`
+                ).join(' ');
+                const borderColor = statusColor[e.status] || 'var(--text-muted)';
+                const schedLine = e.scheduledTime
+                    ? `<p style="font-size:12px; color:var(--warning); margin-top:4px;">⏰ For: ${new Date(e.scheduledTime).toLocaleString()}</p>`
+                    : '';
+                const errLine = e.error
+                    ? `<p style="font-size:12px; color:var(--error); margin-top:4px; word-break:break-word;">⚠️ ${e.error}</p>`
+                    : '';
+                const mediaLine = e.mediaName
+                    ? `<p style="font-size:12px; color:var(--text-muted); margin-top:2px;">📎 ${e.mediaName}</p>`
+                    : '';
+                const preview = e.content
+                    ? `<div style="background:rgba(15,23,42,0.5); border-radius:4px; padding:6px 10px; font-size:12px; color:var(--text-muted); margin-top:6px; white-space:pre-wrap; word-break:break-word; max-height:60px; overflow:hidden;">${e.content}</div>`
+                    : '';
+                return `
+                <div style="border-left:3px solid ${borderColor}; background:rgba(15,23,42,0.4); border-radius:0 8px 8px 0; padding:12px 14px; margin-bottom:10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;">
+                        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                            <span style="font-size:13px; font-weight:600; color:${borderColor};">${statusLabel[e.status] || e.status}</span>
+                            <span class="badge">${typeIcon[e.type] || '📝'} ${e.type}</span>
+                            ${chipsHtml}
+                        </div>
+                        <span style="font-size:11px; color:var(--text-muted); white-space:nowrap;" title="${new Date(e.time).toLocaleString()}">${relativeTime(e.time)}</span>
+                    </div>
+                    ${schedLine}${errLine}${mediaLine}${preview}
+                </div>`;
+            }).join('');
+        }
+
+        // ============================================
+        // AI CAPTION
+        // ============================================
+        async function loadGeminiKeyStatus() {
+            try {
+                const res = await fetch(`${API_URL}/settings/gemini-key`);
+                const data = await res.json();
+                const input = document.getElementById('inputGeminiKey');
+                const status = document.getElementById('geminiKeyStatus');
+                if (data.geminiKey) {
+                    if (input) input.value = data.geminiKey;
+                    if (status) status.textContent = '✅ API key loaded from saved config';
+                } else {
+                    if (status) status.textContent = 'No key saved yet';
+                }
+            } catch (_) {}
+        }
+
+        async function saveGeminiKey() {
+            const key = document.getElementById('inputGeminiKey').value.trim();
+            if (!key) { showToast('Enter your Gemini API key', 'error'); return; }
+            try {
+                const res = await fetch(`${API_URL}/settings/gemini-key`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ geminiKey: key })
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
+                document.getElementById('geminiKeyStatus').textContent = '✅ API key saved and ready';
+                document.getElementById('inputGeminiKey').value = '';
+                showToast('✅ Gemini API key saved!');
+            } catch (err) {
+                showToast(`❌ ${err.message}`, 'error');
+            }
+        }
+
+        function toggleAiPanel() {
+            const panel = document.getElementById('aiCaptionPanel');
+            const isOpen = panel.style.display !== 'none';
+            panel.style.display = isOpen ? 'none' : 'block';
+            if (!isOpen) document.getElementById('aiPrompt').focus();
+        }
+
+        // ── Random Option ──────────────────────────────────────────────────
+        function randomizeOptions() {
+            // Reset all options first
+            options.silent = false; options.spoiler = false; options.paid = false;
+            ['btnSilent','btnSpoiler','btnPaid'].forEach(id => document.getElementById(id)?.classList.remove('active'));
+            document.getElementById('starsGroup').style.display = 'none';
+            document.getElementById('starsCount').value = '10'; syncStarsPreview();
+
+            const pick = Math.floor(Math.random() * 3); // 0=spoiler 1=paid 2=both
+            if (pick === 0 || pick === 2) {
+                options.spoiler = true;
+                document.getElementById('btnSpoiler').classList.add('active');
+            }
+            if (pick === 1 || pick === 2) {
+                options.paid = true;
+                document.getElementById('btnPaid').classList.add('active');
+                const s = Math.max(1, Math.min(2500, parseInt(document.getElementById('starsCount')?.value) || 5));
+                document.getElementById('starsCount').value = s; syncStarsPreview();
+                document.getElementById('starsGroup').style.display = 'block';
+            }
+            const labels = ['👁️ Spoiler', '⭐ Paid', '👁️ Spoiler + ⭐ Paid'];
+            showToast(`🎲 Random: ${labels[pick]}`);
+            updatePostUI();
+        }
+
+        // ── Random Schedule ─────────────────────────────────────────────────
+        function setRandomSchedule() {
+            let baseMs = Date.now();
+            const futureTimes = (scheduledMessages || [])
+                .map(m => new Date(m.scheduledTime).getTime())
+                .filter(t => t > Date.now());
+            const hasChain = futureTimes.length > 0;
+            if (hasChain) baseMs = Math.max(...futureTimes);
+
+            const randMin = 3 + Math.floor(Math.random() * 58); // 3–60 min
+            const target  = new Date(baseMs + randMin * 60000);
+            const p = n => String(n).padStart(2, '0');
+            document.getElementById('scheduledTime').value =
+                `${target.getFullYear()}-${p(target.getMonth()+1)}-${p(target.getDate())}T${p(target.getHours())}:${p(target.getMinutes())}`;
+            document.getElementById('scheduleGroup').style.display = 'block';
+            document.getElementById('scheduleHint').textContent =
+                `⏰ +${randMin} min → ${target.toLocaleTimeString()} ${hasChain ? '(after last scheduled post)' : '(from now)'}`;
+            updatePostUI();
+        }
+
+        // ── Auto AI Caption with Emoji ──────────────────────────────────────
+        async function autoEmojiCaption() {
+            if (!selectedFile) return;
+            // Check server has a Gemini key before bothering
+            try {
+                const ks = await fetch(`${API_URL}/settings/gemini-key`);
+                const kd = await ks.json();
+                if (!kd.geminiKey) return;
+            } catch (_) { return; }
+
+            const ta   = document.getElementById('messageContent');
+            const prev = ta.placeholder;
+            ta.placeholder = '✨ Generating AI caption with emoji…';
+
+            try {
+                let imageBase64 = null, mimeType = null;
+                if (selectedFile.type.startsWith('image/')) {
+                    imageBase64 = await fileToBase64(selectedFile);
+                    mimeType    = selectedFile.type;
+                }
+                const res  = await fetch(`${API_URL}/ai/caption`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        imageBase64, mimeType,
+                        prompt: 'Write a caption with 8-12 relevant emoji mixed naturally throughout — at the start, between sentences, and at the end.',
+                        tone: document.getElementById('aiTone')?.value || 'engaging',
+                        language: document.getElementById('aiLanguage')?.value || 'English',
+                    }),
+                });
+                const data = await res.json();
+                if (data.success && data.caption && !ta.value) {
+                    ta.value = data.caption;
+                    updateCharCount();
+                    showToast('✨ AI caption with emoji generated!');
+                } else if (!data.success) {
+                    showToast(`⚠️ AI caption: ${data.error}`, 'error');
+                    console.warn('[autoEmojiCaption]', data.error);
+                }
+            } catch (err) {
+                showToast(`⚠️ AI caption failed: ${err.message}`, 'error');
+                console.warn('[autoEmojiCaption]', err.message);
+            }
+            finally { ta.placeholder = prev; }
+        }
+
+        async function generateAiCaption() {
+            const btn = document.getElementById('btnGenerateCaption');
+            const tone = document.getElementById('aiTone').value;
+            const language = document.getElementById('aiLanguage').value.trim() || 'English';
+            const prompt = document.getElementById('aiPrompt').value.trim();
+
+            btn.disabled = true;
+            btn.textContent = '⏳ Generating...';
+
+            try {
+                let imageBase64 = null;
+                let mimeType = null;
+                if (selectedFile && selectedFile.type.startsWith('image/')) {
+                    imageBase64 = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => resolve(e.target.result.split(',')[1]);
+                        reader.readAsDataURL(selectedFile);
+                    });
+                    mimeType = selectedFile.type;
+                }
+
+                const res = await fetch(`${API_URL}/ai/caption`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imageBase64, mimeType, prompt, tone, language })
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
+
+                document.getElementById('messageContent').value = data.caption;
+                updateCharCount();
+                showToast('✅ Caption generated!');
+                document.getElementById('aiCaptionPanel').style.display = 'none';
+            } catch (err) {
+                showToast(`❌ ${err.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '✨ Generate Caption';
+            }
+        }
+    </script>
+</body>
+</html>

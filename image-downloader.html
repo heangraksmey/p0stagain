@@ -1,0 +1,2307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Image Downloader</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0f0f11;--surface:#1a1a1f;--surface2:#222228;--border:#2e2e38;
+    --text:#f0f0f2;--muted:#888;--accent:#6c63ff;--accent2:#a78bfa;
+    --green:#22c55e;--red:#ef4444;--yellow:#f59e0b;
+  }
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;padding:2rem 1rem}
+  h1{font-size:1.6rem;font-weight:600;letter-spacing:-0.5px;margin-bottom:4px}
+  .sub{color:var(--muted);font-size:14px;margin-bottom:2rem}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.5rem;margin-bottom:1.25rem}
+
+  .row{display:flex;gap:10px;align-items:stretch}
+  input[type=text]{
+    flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+    padding:12px 16px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;outline:none;
+  }
+  input[type=text]:focus{border-color:var(--accent)}
+  input[type=text]::placeholder{color:var(--muted)}
+
+  button{
+    padding:12px 20px;border-radius:10px;border:none;cursor:pointer;
+    font-family:'DM Sans',sans-serif;font-weight:500;font-size:14px;transition:opacity .15s,transform .1s;
+  }
+  button:active{transform:scale(0.97)}
+  button:disabled{opacity:0.4;cursor:not-allowed}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-primary:hover:not(:disabled){opacity:0.85}
+  .btn-outline{background:transparent;color:var(--text);border:1px solid var(--border)}
+  .btn-outline:hover:not(:disabled){background:var(--surface2)}
+  .btn-green{background:var(--green);color:#fff}
+  .btn-green:hover:not(:disabled){opacity:0.85}
+  .btn-sm{padding:6px 12px;font-size:12px;border-radius:8px}
+
+  .status{padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:1rem;display:none}
+  .status.info{background:#1e3a5f;color:#93c5fd;display:block}
+  .status.ok{background:#14532d;color:#86efac;display:block}
+  .status.err{background:#450a0a;color:#fca5a5;display:block}
+  .status.warn{background:#451a03;color:#fdba74;display:block}
+
+  .progress{height:4px;background:var(--surface2);border-radius:4px;margin-bottom:1.25rem;display:none;overflow:hidden}
+  .progress-bar{height:100%;background:var(--accent);border-radius:4px;width:0;transition:width .4s}
+
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.25rem;display:none}
+  .stat{background:var(--surface2);border-radius:10px;padding:12px 14px;text-align:center}
+  .stat-n{font-size:22px;font-weight:600}
+  .stat-l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-top:2px}
+
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;display:none}
+  .size-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:1rem;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;display:none}
+  .chip{padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif}
+  .chip.active{background:var(--accent);color:#fff;border-color:transparent}
+  .chip:hover:not(.active){border-color:var(--accent);color:var(--accent)}
+  .size-label{font-size:12px;color:var(--muted);white-space:nowrap}
+  .size-inputs{display:flex;align-items:center;gap:6px;margin-left:4px}
+  .size-input{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:4px 8px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;width:72px;outline:none;appearance:textfield;-moz-appearance:textfield}
+  .size-input::-webkit-outer-spin-button,.size-input::-webkit-inner-spin-button{-webkit-appearance:none;appearance:none}
+  .size-input:focus{border-color:var(--accent)}
+  .size-input::placeholder{color:var(--muted)}
+  .size-sep{color:var(--muted);font-size:12px}
+  .spacer{flex:1}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+  .img-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color .15s}
+  .img-card:hover{border-color:var(--accent)}
+  .thumb-wrap{width:100%;height:150px;background:var(--surface2);position:relative;overflow:hidden}
+  .thumb{width:100%;height:100%;object-fit:cover;display:block}
+  .thumb-fail{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:28px}
+  .badge{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.7);color:#fff;font-size:10px;font-family:'DM Mono',monospace;padding:2px 7px;border-radius:6px;text-transform:uppercase}
+  .thumb-size{position:absolute;bottom:6px;left:6px;background:rgba(0,0,0,.72);color:#fff;font-size:10px;font-family:'DM Mono',monospace;padding:2px 7px;border-radius:6px;letter-spacing:.3px}
+  .thumb-overlay{position:absolute;inset:0;background:rgba(0,0,0,0);display:flex;align-items:center;justify-content:center;transition:background .18s}
+  .img-card:hover .thumb-overlay{background:rgba(0,0,0,.42)}
+  .thumb-dl-btn{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:8px 18px;font-size:13px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;opacity:0;transform:scale(0.82);transition:opacity .18s,transform .18s}
+  .img-card:hover .thumb-dl-btn{opacity:1;transform:scale(1)}
+  .thumb-dl-btn:hover{opacity:.85!important}
+  .img-info{padding:8px 10px}
+  .img-name{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:6px}
+  .img-btns{display:flex;gap:5px}
+  .img-btns button{flex:1;padding:6px 0;border-radius:8px;font-size:12px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer}
+  .img-btns button:hover{background:var(--surface2)}
+
+  /* ── Quick Post Modal ── */
+  .qp-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:900;display:none}
+  .qp-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:901;display:none;
+    width:min(520px,95vw);max-height:90vh;overflow-y:auto;background:var(--surface);border:1px solid var(--border);
+    border-radius:16px;padding:1.5rem;box-shadow:0 24px 60px rgba(0,0,0,.6)}
+  .qp-modal.open,.qp-backdrop.open{display:block}
+  .qp-title{font-size:1rem;font-weight:600;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center}
+  .qp-preview{width:100%;max-height:180px;object-fit:contain;border-radius:8px;background:var(--surface2);margin-bottom:1rem}
+  .qp-group-list{max-height:160px;overflow-y:auto;background:var(--surface2);border:1px solid var(--border);
+    border-radius:10px;padding:6px;margin-bottom:10px}
+  .qp-ch-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;cursor:pointer;transition:background .15s}
+  .qp-ch-item:hover{background:rgba(108,99,255,.1)}
+  .qp-ch-item.checked{background:rgba(108,99,255,.15)}
+  .qp-ch-item input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+  .qp-option-badge{font-size:12px;padding:4px 12px;border-radius:20px;background:rgba(108,99,255,.2);color:var(--accent2);display:inline-block;margin-top:6px}
+  .qp-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .thumb-post-btn{position:absolute;bottom:6px;right:6px;background:var(--accent);color:#fff;border:none;
+    border-radius:8px;padding:5px 10px;font-size:11px;font-family:'DM Sans',sans-serif;font-weight:500;
+    cursor:pointer;opacity:0;transform:scale(0.8);transition:opacity .18s,transform .18s;z-index:2}
+  .img-card:hover .thumb-post-btn{opacity:1;transform:scale(1)}
+
+  .empty{text-align:center;padding:4rem 1rem;color:var(--muted)}
+  .empty .icon{font-size:48px;margin-bottom:12px;opacity:.4}
+  .empty p{font-size:15px}
+
+  .how{margin-top:2rem}
+  .how h3{font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:12px}
+  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+  .step{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px}
+  .step-n{font-size:11px;color:var(--accent2);font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+  .step-t{font-size:13px;color:var(--text);line-height:1.5}
+
+  .note{margin-top:1.5rem;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;font-size:12px;color:var(--muted);line-height:1.7}
+  .note strong{color:var(--text)}
+
+  a{color:var(--accent2);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  @media(max-width:500px){
+    .row{flex-direction:column}
+    .stats{grid-template-columns:repeat(3,1fr)}
+  }
+
+  /* ── Watch Group ── */
+  .watch-section{margin-top:2rem}
+  .watch-section h2{font-size:1rem;font-weight:600;margin-bottom:4px}
+  @keyframes watchPulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .watch-live{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--green)}
+  .watch-live::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--green);animation:watchPulse 1.4s ease-in-out infinite;flex-shrink:0}
+  .watch-idle{font-size:12px;color:var(--muted)}
+  .watch-log{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--muted);min-height:52px;line-height:1.7;margin-top:10px}
+  .watch-log a{word-break:break-all}
+  .watch-log .log-link{color:var(--accent2);word-break:break-all}
+  .watch-log .log-time{color:var(--muted);font-size:11px}
+  .watch-log .log-text{color:var(--muted);font-size:11px;margin-top:3px;white-space:pre-wrap;word-break:break-word;max-height:48px;overflow:hidden}
+  select.watch-select{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;cursor:pointer}
+  select.watch-select:focus{border-color:var(--accent)}
+
+  /* ── Telegram Link Sender ── */
+  .tg-section{margin-top:2rem}
+  .tg-section h2{font-size:1rem;font-weight:600;margin-bottom:4px}
+  .tg-group-list{max-height:220px;overflow-y:auto;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:6px;margin-bottom:10px}
+  .tg-group-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:background .15s}
+  .tg-group-item:hover{background:rgba(108,99,255,0.1)}
+  .tg-group-item.selected{background:rgba(108,99,255,0.15)}
+  .tg-group-item input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+  .tg-group-name{font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tg-group-id{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+</style>
+</head>
+<body>
+
+<a href="telegram-bot-dashboard.html" style="
+    display:inline-flex; align-items:center; gap:8px;
+    padding:7px 14px; border-radius:10px; margin-bottom:1.5rem;
+    background:transparent; border:1px solid var(--border);
+    color:var(--muted); text-decoration:none; font-size:13px; font-weight:500;
+    transition:border-color 0.2s, color 0.2s;
+" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent2)'"
+   onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+    ← Bot Manager
+</a>
+
+<h1>🖼 Image Downloader</h1>
+<p class="sub">Paste any webpage URL — extract all images and download them</p>
+
+<div class="card">
+  <div class="row" style="margin-bottom:10px">
+    <input type="text" id="urlIn" placeholder="https://example.com/models/username/" spellcheck="false"/>
+    <button class="btn-primary" id="extractBtn" onclick="doExtract()">🔍 Extract</button>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;padding:10px 12px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)">
+    <span style="font-size:12px;color:var(--muted);white-space:nowrap">🔎 Keyword:</span>
+    <input type="text" id="keyword" placeholder="auto-filled from URL" spellcheck="false"
+      style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;outline:none"
+      oninput="applyKeyword()"/>
+    <button class="btn-outline btn-sm" onclick="clearKeyword()" style="padding:5px 10px;font-size:12px">✕</button>
+  </div>
+  <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px;padding:10px 12px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)">
+    <span style="font-size:12px;color:var(--muted);white-space:nowrap">🖼 Type:</span>
+    <button class="chip active" id="tAll" onclick="toggleAllTypes()" style="padding:3px 10px;font-size:11px">All</button>
+    <button class="chip active" id="tJpg" onclick="toggleType('jpg','tJpg')" style="padding:3px 10px;font-size:11px">JPG</button>
+    <button class="chip active" id="tPng" onclick="toggleType('png','tPng')" style="padding:3px 10px;font-size:11px">PNG</button>
+    <button class="chip active" id="tWebp" onclick="toggleType('webp','tWebp')" style="padding:3px 10px;font-size:11px">WebP</button>
+    <button class="chip active" id="tGif" onclick="toggleType('gif','tGif')" style="padding:3px 10px;font-size:11px">GIF</button>
+    <button class="chip active" id="tSvg" onclick="toggleType('svg','tSvg')" style="padding:3px 10px;font-size:11px">SVG</button>
+  </div>
+  <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px;padding:10px 12px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)">
+    <span style="font-size:12px;color:var(--muted);white-space:nowrap">📐 Min size:</span>
+    <input type="number" class="size-input" id="minW" placeholder="Width" min="0" style="width:80px" oninput="applyCustomSize()"/>
+    <span style="font-size:12px;color:var(--muted)">×</span>
+    <input type="number" class="size-input" id="minH" placeholder="Height" min="0" style="width:80px" oninput="applyCustomSize()"/>
+    <span style="font-size:11px;color:var(--muted)">px</span>
+    <div style="width:1px;height:16px;background:var(--border);margin:0 4px"></div>
+    <button class="chip" id="pAny" onclick="setPreset(0,0,'pAny')" style="padding:3px 10px;font-size:11px">Any</button>
+    <button class="chip" id="p500" onclick="setPreset(500,500,'p500')" style="padding:3px 10px;font-size:11px">≥ 500px</button>
+    <button class="chip" id="p800" onclick="setPreset(800,600,'p800')" style="padding:3px 10px;font-size:11px">≥ 800×600</button>
+    <button class="chip" id="pHD" onclick="setPreset(1280,720,'pHD')" style="padding:3px 10px;font-size:11px">HD</button>
+    <button class="chip" id="pFHD" onclick="setPreset(1920,1080,'pFHD')" style="padding:3px 10px;font-size:11px">Full HD</button>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn-outline btn-sm" onclick="pasteUrl()">📋 Paste URL</button>
+    <button class="btn-outline btn-sm" onclick="clearAll()">✕ Clear</button>
+    <span style="font-size:12px;color:var(--muted);align-self:center;margin-left:4px">Works with most public websites</span>
+  </div>
+</div>
+
+<div class="status" id="status"></div>
+<div class="progress" id="prog"><div class="progress-bar" id="progBar"></div></div>
+
+<div class="stats" id="stats">
+  <div class="stat"><div class="stat-n" id="sTotal">0</div><div class="stat-l">Found</div></div>
+  <div class="stat"><div class="stat-n" id="sShown">0</div><div class="stat-l">Shown</div></div>
+  <div class="stat"><div class="stat-n" id="sFailed" style="color:var(--red)">0</div><div class="stat-l">Failed</div></div>
+</div>
+
+<div class="toolbar" id="toolbar">
+  <button class="chip active" onclick="setFilter('all',this)">All</button>
+  <button class="chip" onclick="setFilter('jpg',this)">JPG</button>
+  <button class="chip" onclick="setFilter('png',this)">PNG</button>
+  <button class="chip" onclick="setFilter('webp',this)">WebP</button>
+  <button class="chip" onclick="setFilter('gif',this)">GIF</button>
+  <button class="chip" onclick="setFilter('svg',this)">SVG</button>
+  <div class="spacer"></div>
+  <span style="font-size:12px;color:var(--muted)">Qty:</span>
+  <input type="number" id="dlQty" min="1" placeholder="All" class="size-input" style="width:58px" title="Max images to download"/>
+  <button class="btn-green btn-sm" onclick="downloadAll()" style="padding:6px 16px">⬇ Download All</button>
+</div>
+
+<div class="size-toolbar" id="sizeToolbar">
+  <span class="size-label">Filter size:</span>
+  <button class="chip active" onclick="setSizeFilter(0,0,this)">Any</button>
+  <button class="chip" onclick="setSizeFilter(300,300,this)">≥ 300px</button>
+  <button class="chip" onclick="setSizeFilter(500,500,this)">≥ 500px</button>
+  <button class="chip" onclick="setSizeFilter(800,600,this)">≥ 800×600</button>
+  <button class="chip" onclick="setSizeFilter(1280,720,this)">≥ HD</button>
+  <button class="chip" onclick="setSizeFilter(1920,1080,this)">≥ Full HD</button>
+</div>
+
+<div id="grid" class="grid">
+  <div class="empty" style="grid-column:1/-1">
+    <div class="icon">🔗</div>
+    <p>Enter a webpage URL above and click Extract</p>
+  </div>
+</div>
+
+<div class="how">
+  <h3>How it works</h3>
+  <div class="steps">
+    <div class="step"><div class="step-n">Step 1</div><div class="step-t">Paste the gallery page URL into the input above</div></div>
+    <div class="step"><div class="step-n">Step 2</div><div class="step-t">Click Extract — the tool fetches the page and finds all image links</div></div>
+    <div class="step"><div class="step-n">Step 3</div><div class="step-t">Preview thumbnails appear in the grid below</div></div>
+    <div class="step"><div class="step-n">Step 4</div><div class="step-t">Click Download on any image, or Download All for everything</div></div>
+  </div>
+</div>
+
+<div class="note">
+  <strong>Note:</strong> This tool uses a public proxy to fetch pages. Some websites block external access — if extraction fails, try right-clicking images on the site and saving them manually.
+  Images with <strong>CORS restrictions</strong> may not preview but can still be opened via the 🔗 button.
+  Works best with <strong>WordPress, photography sites, and static pages</strong>.
+</div>
+
+<!-- ── Watch URL for New Posts ── -->
+<div class="card watch-section" id="urlWatchCard">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+    <h2>🔍 Watch URL for New Posts</h2>
+    <span id="urlWatchBadge" class="watch-idle">⏸ Idle</span>
+  </div>
+  <p style="color:var(--muted);font-size:13px;margin-bottom:12px">
+    Polls any listing page — detects new post links or images, auto-loads them into the extractor, then auto-posts.
+  </p>
+
+  <!-- Mode selector -->
+  <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+    <button class="chip active" id="uwModeLinks" onclick="setUwMode('links')">🔗 New Post Links</button>
+    <button class="chip"        id="uwModeImages" onclick="setUwMode('images')">🖼 New Images</button>
+  </div>
+  <div id="uwModeHint" style="font-size:12px;color:var(--muted);margin-bottom:10px">
+    Watches the listing page for new post URLs → opens each one → extracts images → auto-posts.
+  </div>
+
+  <div class="row" style="margin-bottom:8px">
+    <input type="text" id="urlWatchInput" placeholder="https://www.mplstudios.com/studio_girls/" spellcheck="false"/>
+    <button class="btn-outline btn-sm" onclick="pasteUrlWatch()" style="padding:10px 14px;white-space:nowrap">📋 Paste</button>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+    <span style="font-size:13px;color:var(--text);white-space:nowrap">⏱ Check every:</span>
+    <button class="chip active" id="uwInt1"  onclick="setUwInterval(1,'uwInt1')">1 min</button>
+    <button class="chip"        id="uwInt5"  onclick="setUwInterval(5,'uwInt5')">5 min</button>
+    <button class="chip"        id="uwInt10" onclick="setUwInterval(10,'uwInt10')">10 min</button>
+    <button class="chip"        id="uwInt30" onclick="setUwInterval(30,'uwInt30')">30 min</button>
+    <button class="chip"        id="uwInt60" onclick="setUwInterval(60,'uwInt60')">1 hr</button>
+  </div>
+
+  <!-- ⚙️ Config & Test panel -->
+  <details id="uwConfigPanel" style="margin-bottom:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px">
+    <summary style="cursor:pointer;font-size:13px;font-weight:500;color:var(--accent2);list-style:none;display:flex;justify-content:space-between;align-items:center">
+      ⚙️ Config &amp; Test Link
+      <span style="font-size:11px;color:var(--muted);font-weight:normal">click to expand</span>
+    </summary>
+
+    <div style="margin-top:12px">
+      <!-- Quick presets -->
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">📌 Quick test URLs:</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+        <button class="chip btn-sm" style="font-size:11px" onclick="setUwTestUrl('https://www.mplstudios.com/portfolio/')">mplstudios /portfolio/</button>
+        <button class="chip btn-sm" style="font-size:11px" onclick="setUwTestUrl('https://www.mplstudios.com/studio_girls/')">mplstudios /studio_girls/</button>
+      </div>
+
+      <!-- Test input -->
+      <div class="row" style="margin-bottom:8px">
+        <input type="text" id="uwTestInput" value="https://www.mplstudios.com/portfolio/"
+          placeholder="Paste any URL to test…" spellcheck="false"/>
+        <button class="btn-primary btn-sm" id="uwTestBtn" onclick="testUwUrl()"
+          style="white-space:nowrap;border-radius:8px;padding:10px 16px">🔍 Test</button>
+      </div>
+
+      <!-- Results -->
+      <div id="uwTestResult" style="display:none;font-size:12px;line-height:1.8"></div>
+
+      <!-- Link pattern filter -->
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">🔎 Only watch links containing (optional):</div>
+        <input type="text" id="uwLinkFilter" placeholder="e.g. /update/ or /gallery/"
+          style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;
+                 padding:7px 12px;color:var(--text);font-size:12px;outline:none;font-family:'DM Mono',monospace">
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Leave empty to detect all new links on the page</div>
+      </div>
+    </div>
+  </details>
+
+  <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);
+                border:1px solid var(--border);border-radius:10px;margin-bottom:10px;cursor:pointer;user-select:none">
+    <input type="checkbox" id="uwAutoPostToggle" checked
+      style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">
+    <span style="font-size:13px;color:var(--text);font-weight:500">🤖 Auto Post detected updates</span>
+    <span style="font-size:12px;color:var(--muted)">— posts ALL extracted images to your selected channels immediately</span>
+  </label>
+
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:0">
+    <button class="btn-primary" id="urlWatchBtn" onclick="toggleUrlWatch()"
+      style="flex:1;border-radius:10px;padding:12px;font-size:14px">▶ Start Watching</button>
+    <button class="btn-outline btn-sm" id="uwMuteBtn" onclick="toggleUwMute()" style="font-size:12px">🔊 Sound On</button>
+  </div>
+
+  <div class="watch-log" id="urlWatchLog" style="margin-top:10px">Waiting to start…</div>
+</div>
+
+<!-- ── Quick Post Modal ── -->
+<div class="qp-backdrop" id="qpBackdrop" onclick="closeQP()"></div>
+<div class="qp-modal" id="qpModal">
+  <div class="qp-title">
+    📤 Quick Post to Telegram
+    <button class="btn-outline btn-sm" onclick="closeQP()" style="padding:4px 10px">✕</button>
+  </div>
+
+  <img id="qpPreview" class="qp-preview" src="" alt="preview">
+
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+    <span style="font-size:13px;font-weight:500">📋 Channels &amp; Groups
+      <span id="qpSelCount" style="color:var(--muted);font-size:12px;font-weight:normal"> (none)</span>
+    </span>
+    <div style="display:flex;gap:6px">
+      <button class="btn-outline btn-sm" onclick="qpSelAll(true)">✓ All</button>
+      <button class="btn-outline btn-sm" onclick="qpSelAll(false)">✗ None</button>
+    </div>
+  </div>
+  <div class="qp-group-list" id="qpChannelList">
+    <p style="color:var(--muted);font-size:12px;padding:8px">Loading channels…</p>
+  </div>
+
+  <textarea id="qpCaption" rows="3" placeholder="Caption (auto-generated if Gemini key is set)…"
+    style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+           padding:10px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;
+           outline:none;resize:vertical;margin-bottom:8px"></textarea>
+
+  <div class="qp-row">
+    <button class="btn-primary btn-sm" id="qpAiBtn" onclick="qpAutoCaption()" style="flex:1;border-radius:8px">✨ AI Caption + Emoji</button>
+    <button class="btn-outline btn-sm" onclick="qpRandomOptions()" style="flex:1;border-radius:8px">🎲 Random Option</button>
+    <button class="btn-outline btn-sm" onclick="qpRandomSchedule()" style="flex:1;border-radius:8px">⏰ Random Schedule</button>
+  </div>
+
+  <div id="qpOptionBadge" style="margin-bottom:8px;min-height:24px"></div>
+
+  <button class="btn-green" id="qpSendBtn" onclick="qpSend()" style="width:100%;padding:13px;border-radius:10px;font-size:14px">
+    📤 Post Now
+  </button>
+  <div class="status" id="qpStatus" style="margin-top:10px"></div>
+</div>
+
+<!-- ── Watch Group for New Links ── -->
+<div class="card watch-section" id="watchCard">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+    <h2>👁 Auto-Watch Group for Links</h2>
+    <span id="watchBadge" class="watch-idle">⏸ Idle</span>
+  </div>
+  <p style="color:var(--muted);font-size:13px;margin-bottom:14px">
+    Select a group — when someone posts a new message with a link, images extract automatically and an alarm rings. No clicking needed.
+  </p>
+
+  <div class="row" style="margin-bottom:8px">
+    <select class="watch-select" id="watchGroupSelect">
+      <option value="">-- Select group to watch --</option>
+    </select>
+    <button class="btn-primary" id="watchBtn" onclick="toggleWatch()" style="white-space:nowrap;border-radius:10px">
+      ▶ Start Watching
+    </button>
+  </div>
+
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:0;flex-wrap:wrap">
+    <button class="btn-outline btn-sm" onclick="playAlarm(true)" style="font-size:12px">🔔 Test Alarm</button>
+    <button class="btn-outline btn-sm" id="muteBtn" onclick="toggleMute()" style="font-size:12px">🔊 Sound On</button>
+    <span id="notifHint" style="font-size:11px;color:var(--muted)"></span>
+  </div>
+
+  <div class="watch-log" id="watchLog">No messages detected yet — start watching to begin.</div>
+</div>
+
+<!-- ── Auto Post to Channel / Group ── -->
+<div class="card tg-section">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+    <h2>🚀 Auto Post to Channel / Group</h2>
+    <button class="btn-outline btn-sm" id="tgRefreshBtn" onclick="loadTelegramGroups()">🔄 Refresh</button>
+  </div>
+  <p style="color:var(--muted);font-size:13px;margin-bottom:10px">
+    Select channels and a random image count — automatically picks images from the grid above, generates AI captions, and posts.
+  </p>
+
+  <!-- Auto Post Mode toggle -->
+  <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);
+                border:1px solid var(--border);border-radius:10px;margin-bottom:10px;cursor:pointer;user-select:none">
+    <input type="checkbox" id="tgAutoMode" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">
+    <span style="font-size:13px;color:var(--text);font-weight:500">🤖 Auto Post Mode</span>
+    <span style="font-size:12px;color:var(--muted)">— when images load, auto-select channels, randomize options &amp; schedule, then post. No clicks needed.</span>
+  </label>
+
+  <!-- Available images banner -->
+  <div style="display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);
+              border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px">
+    📸 <span id="tgAvailText" style="color:var(--muted)">No images yet — extract images with the URL field above first.</span>
+  </div>
+
+  <!-- Random qty range -->
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+    <span style="font-size:13px;color:var(--text);white-space:nowrap">🎲 Pick</span>
+    <input type="number" id="tgQtyMin" min="1" max="99" value="1"
+      style="width:58px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+             padding:7px 10px;color:var(--text);font-size:13px;text-align:center;outline:none;
+             font-family:'DM Mono',monospace">
+    <span style="font-size:13px;color:var(--muted)">to</span>
+    <input type="number" id="tgQtyMax" min="1" max="99" value="3"
+      style="width:58px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+             padding:7px 10px;color:var(--text);font-size:13px;text-align:center;outline:none;
+             font-family:'DM Mono',monospace">
+    <span style="font-size:13px;color:var(--muted)">random images total</span>
+  </div>
+
+  <!-- Album / single size selector -->
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+    <span style="font-size:13px;color:var(--text);white-space:nowrap">📸 Per post:</span>
+    <button class="chip active" id="grpBtn1" onclick="setTgGroupSize(1)">Single</button>
+    <button class="chip"        id="grpBtn2" onclick="setTgGroupSize(2)">Album 2</button>
+    <button class="chip"        id="grpBtn3" onclick="setTgGroupSize(3)">Album 3</button>
+    <button class="chip"        id="grpBtn4" onclick="setTgGroupSize(4)">Album 4</button>
+    <button class="chip"        id="grpBtn5" onclick="setTgGroupSize(5)">Album 5</button>
+  </div>
+
+  <!-- Channel / Group selector -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+    <span style="font-size:13px;font-weight:500">
+      📋 Channels &amp; Groups
+      <span id="tgSelectedCount" style="color:var(--muted);font-weight:normal;font-size:12px"> (none selected)</span>
+    </span>
+    <div style="display:flex;gap:6px">
+      <button class="btn-outline btn-sm" onclick="selectAllTgGroups(true)">✓ All</button>
+      <button class="btn-outline btn-sm" onclick="selectAllTgGroups(false)">✗ None</button>
+    </div>
+  </div>
+  <div class="tg-group-list" id="tgGroupList">
+    <div style="text-align:center;padding:1.5rem;color:var(--muted);font-size:13px">
+      <div style="font-size:32px;margin-bottom:6px;opacity:.4">📭</div>
+      <p>Loading groups… make sure the bot server is running (<code style="background:var(--surface);padding:1px 6px;border-radius:4px;font-size:11px">npm start</code>)</p>
+    </div>
+  </div>
+
+  <!-- Caption (auto-generated when images load) -->
+  <div style="margin-top:10px;margin-bottom:8px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <span style="font-size:13px;font-weight:500;color:var(--text)">✍️ Caption</span>
+      <button class="btn-outline btn-sm" id="tgCaptionRefreshBtn" onclick="tgRefreshCaption()"
+        style="font-size:12px;padding:5px 12px;border-radius:8px">✨ Refresh Caption</button>
+    </div>
+    <textarea id="tgSharedCaption" rows="3"
+      placeholder="Caption auto-generates with emoji when images are extracted…"
+      style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+             padding:10px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;
+             outline:none;resize:vertical"></textarea>
+  </div>
+
+  <!-- Post Mode: Free / Stars / Random / Star Range -->
+  <div style="padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-bottom:10px">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:500;text-transform:uppercase;letter-spacing:.5px">💰 Post Mode</div>
+    <div style="display:flex;flex-direction:column;gap:9px">
+
+      <!-- Free -->
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none">
+        <input type="radio" name="tgStarMode" id="tgStarModeFree" value="free" checked
+          style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer;flex-shrink:0"
+          onchange="onStarModeChange()">
+        <span style="font-size:13px;color:var(--text)">🆓 Free</span>
+        <span style="font-size:12px;color:var(--muted)">— no stars required</span>
+      </label>
+
+      <!-- Fixed Stars -->
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;flex-wrap:wrap">
+        <input type="radio" name="tgStarMode" id="tgStarModeFixed" value="fixed"
+          style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer;flex-shrink:0"
+          onchange="onStarModeChange()">
+        <span style="font-size:13px;color:var(--text)">⭐ Stars</span>
+        <input type="number" id="tgStarsFixed" value="5" min="1" max="2500"
+          style="width:68px;background:var(--surface);border:1px solid var(--border);border-radius:8px;
+                 padding:5px 8px;color:var(--text);font-size:12px;text-align:center;outline:none;
+                 font-family:'DM Mono',monospace;opacity:.4;pointer-events:none"
+          oninput="document.getElementById('tgStarModeFixed').checked=true;onStarModeChange()">
+        <span style="font-size:12px;color:var(--muted)">stars (1–2500)</span>
+      </label>
+
+      <!-- Random: free or paid -->
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none">
+        <input type="radio" name="tgStarMode" id="tgStarModeRandom" value="random"
+          style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer;flex-shrink:0"
+          onchange="onStarModeChange()">
+        <span style="font-size:13px;color:var(--text)">🎲 Random</span>
+        <span style="font-size:12px;color:var(--muted)">— randomly free or paid each post</span>
+      </label>
+
+      <!-- Star Range -->
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;flex-wrap:wrap">
+        <input type="radio" name="tgStarMode" id="tgStarModeRange" value="range"
+          style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer;flex-shrink:0"
+          onchange="onStarModeChange()">
+        <span style="font-size:13px;color:var(--text)">📊 Star Range</span>
+        <input type="number" id="tgStarsMin" value="1" min="1" max="2500" placeholder="Min"
+          style="width:60px;background:var(--surface);border:1px solid var(--border);border-radius:8px;
+                 padding:5px 8px;color:var(--text);font-size:12px;text-align:center;outline:none;
+                 font-family:'DM Mono',monospace;opacity:.4;pointer-events:none"
+          oninput="document.getElementById('tgStarModeRange').checked=true;onStarModeChange()">
+        <span style="font-size:12px;color:var(--muted)">–</span>
+        <input type="number" id="tgStarsMax" value="50" min="1" max="2500" placeholder="Max"
+          style="width:60px;background:var(--surface);border:1px solid var(--border);border-radius:8px;
+                 padding:5px 8px;color:var(--text);font-size:12px;text-align:center;outline:none;
+                 font-family:'DM Mono',monospace;opacity:.4;pointer-events:none"
+          oninput="document.getElementById('tgStarModeRange').checked=true;onStarModeChange()">
+        <span style="font-size:12px;color:var(--muted)">stars</span>
+      </label>
+
+    </div>
+  </div>
+
+  <!-- Option buttons -->
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+    <button class="btn-outline btn-sm" onclick="tgRandomOptions()" style="flex:1;border-radius:8px;padding:9px 8px">🎲 Random Option</button>
+    <button class="btn-outline btn-sm" onclick="tgRandomSchedule()" style="flex:1;border-radius:8px;padding:9px 8px">⏰ Random Schedule</button>
+  </div>
+
+  <div id="tgOptionBadge" style="margin-bottom:8px;min-height:20px;display:flex;gap:6px;flex-wrap:wrap"></div>
+
+  <!-- Progress bar -->
+  <div id="tgProgress" style="display:none;margin-bottom:10px">
+    <div style="background:var(--surface2);border-radius:4px;height:6px;overflow:hidden;margin-bottom:4px">
+      <div id="tgProgressBar" style="height:100%;background:var(--accent);width:0%;transition:width .3s"></div>
+    </div>
+    <p id="tgProgressText" style="font-size:12px;color:var(--muted)"></p>
+  </div>
+
+  <button class="btn-primary" id="tgSendBtn" onclick="tgAutoPost()"
+    style="width:100%;padding:13px;font-size:14px;border-radius:10px">
+    🚀 Auto Post Random Images
+  </button>
+  <div class="status" id="tgStatus" style="margin-top:10px"></div>
+</div>
+
+<script>
+let allImages = [];
+let shownImages = [];
+let currentFilter = 'all';
+let currentKeyword = '';
+let failCount = 0;
+let imageSizes = {};
+let currentMinW = 0, currentMinH = 0;
+const TYPE_IDS = {jpg:'tJpg',png:'tPng',webp:'tWebp',gif:'tGif',svg:'tSvg'};
+let allowedTypes = new Set(['jpg','png','webp','gif','svg']);
+
+function extractSlug(url) {
+  try {
+    const parts = new URL(url).pathname.split('/').filter(Boolean);
+    return parts[parts.length - 1] || '';
+  } catch { return ''; }
+}
+
+function applyKeyword() {
+  currentKeyword = document.getElementById('keyword').value.trim().toLowerCase();
+  renderGrid();
+}
+
+function clearKeyword() {
+  document.getElementById('keyword').value = '';
+  currentKeyword = '';
+  renderGrid();
+}
+
+function showStatus(msg, type) {
+  const s = document.getElementById('status');
+  s.textContent = msg;
+  s.className = 'status ' + type;
+}
+function hideStatus() { document.getElementById('status').className = 'status'; }
+
+function setProgress(pct) {
+  const p = document.getElementById('prog');
+  const b = document.getElementById('progBar');
+  if (pct === 0) { p.style.display = 'none'; b.style.width = '0%'; return; }
+  p.style.display = 'block';
+  b.style.width = pct + '%';
+}
+
+function getExt(url) {
+  try {
+    const path = new URL(url).pathname;
+    const m = path.match(/\.(jpe?g|png|gif|webp|svg|bmp|avif)(\?|$)/i);
+    return m ? m[1].toLowerCase().replace('jpeg','jpg') : 'img';
+  } catch { return 'img'; }
+}
+
+function getName(url) {
+  try {
+    const parts = new URL(url).pathname.split('/');
+    return parts[parts.length - 1] || 'image';
+  } catch { return 'image'; }
+}
+
+function updateStats(shown) {
+  document.getElementById('sTotal').textContent = allImages.length;
+  document.getElementById('sShown').textContent = shown;
+  document.getElementById('sFailed').textContent = failCount;
+}
+
+function toggleType(ext, btnId) {
+  if (allowedTypes.has(ext)) {
+    if (allowedTypes.size === 1) return; // keep at least one
+    allowedTypes.delete(ext);
+  } else {
+    allowedTypes.add(ext);
+  }
+  document.getElementById(btnId).classList.toggle('active', allowedTypes.has(ext));
+  const allOn = Object.keys(TYPE_IDS).every(t => allowedTypes.has(t));
+  document.getElementById('tAll').classList.toggle('active', allOn);
+  renderGrid();
+}
+
+function toggleAllTypes() {
+  Object.keys(TYPE_IDS).forEach(t => allowedTypes.add(t));
+  Object.values(TYPE_IDS).forEach(id => document.getElementById(id).classList.add('active'));
+  document.getElementById('tAll').classList.add('active');
+  renderGrid();
+}
+
+function setFilter(type, btn) {
+  currentFilter = type;
+  document.querySelectorAll('#toolbar .chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGrid();
+}
+
+function setSizeFilter(w, h, btn) {
+  currentMinW = w;
+  currentMinH = h;
+  document.getElementById('minW').value = w || '';
+  document.getElementById('minH').value = h || '';
+  document.querySelectorAll('#sizeToolbar .chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGrid();
+}
+
+function applyCustomSize() {
+  currentMinW = parseInt(document.getElementById('minW').value) || 0;
+  currentMinH = parseInt(document.getElementById('minH').value) || 0;
+  document.querySelectorAll('#sizeToolbar .chip').forEach(b => b.classList.remove('active'));
+  if (!currentMinW && !currentMinH) document.querySelector('#sizeToolbar .chip').classList.add('active');
+  ['pAny','p500','p800','pHD','pFHD'].forEach(id => document.getElementById(id).classList.remove('active'));
+  document.getElementById('pAny').classList.toggle('active', !currentMinW && !currentMinH);
+  renderGrid();
+}
+
+function setPreset(w, h, btnId) {
+  currentMinW = w;
+  currentMinH = h;
+  document.getElementById('minW').value = w || '';
+  document.getElementById('minH').value = h || '';
+  ['pAny','p500','p800','pHD','pFHD'].forEach(id => document.getElementById(id).classList.remove('active'));
+  document.getElementById(btnId).classList.add('active');
+  document.querySelectorAll('#sizeToolbar .chip').forEach(b => b.classList.remove('active'));
+  if (!w && !h) document.querySelector('#sizeToolbar .chip').classList.add('active');
+  renderGrid();
+}
+
+function onImgLoad(img, i) {
+  img.parentNode.querySelector('.thumb-fail').style.display = 'none';
+  const w = img.naturalWidth, h = img.naturalHeight;
+  const url = img.dataset.url;
+  imageSizes[url] = {w, h};
+  const szEl = document.getElementById('sz-' + i);
+  if (szEl) szEl.textContent = w + ' × ' + h;
+  if ((currentMinW > 0 || currentMinH > 0) && (w < currentMinW || h < currentMinH)) {
+    const card = img.closest('.img-card');
+    if (card) card.style.display = 'none';
+  }
+}
+
+function renderGrid() {
+  const grid = document.getElementById('grid');
+  let imgs = currentFilter === 'all' ? allImages : allImages.filter(u => getExt(u) === currentFilter);
+  const knownTypes = Object.keys(TYPE_IDS);
+  const allOn = knownTypes.every(t => allowedTypes.has(t));
+  if (!allOn) {
+    imgs = imgs.filter(u => {
+      const ext = getExt(u);
+      return !knownTypes.includes(ext) || allowedTypes.has(ext);
+    });
+  }
+  if (currentMinW > 0 || currentMinH > 0) {
+    imgs = imgs.filter(u => {
+      const sz = imageSizes[u];
+      if (!sz) return true;
+      return sz.w >= currentMinW && sz.h >= currentMinH;
+    });
+  }
+  if (currentKeyword) {
+    imgs = imgs.filter(u => u.toLowerCase().includes(currentKeyword));
+  }
+  shownImages = imgs;
+  updateStats(imgs.length);
+  updateTgAvailCount();
+  if (!imgs.length) {
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="icon">🚫</div><p>No images match this filter</p></div>';
+    return;
+  }
+  grid.innerHTML = imgs.map((url, i) => {
+    const ext = getExt(url);
+    const name = getName(url);
+    const safe = url.replace(/"/g,'&quot;');
+    const safeName = name.replace(/"/g,'&quot;');
+    const known = imageSizes[url];
+    const sizeLabel = known ? `${known.w} × ${known.h}` : '…';
+    return `<div class="img-card">
+      <div class="thumb-wrap">
+        <img class="thumb" src="${safe}" data-url="${safe}" alt="" loading="lazy" crossorigin="anonymous"
+          onerror="this.style.display='none';this.parentNode.querySelector('.thumb-fail').style.display='flex';document.getElementById('sz-${i}').textContent=''"
+          onload="onImgLoad(this,${i})"/>
+        <div class="thumb-fail" style="display:none">🖼</div>
+        <div class="badge">${ext}</div>
+        <div class="thumb-size" id="sz-${i}">${sizeLabel}</div>
+        <div class="thumb-overlay">
+          <button class="thumb-dl-btn" onclick="dlOne('${safe}','${safeName}')">⬇ Download</button>
+        </div>
+        <button class="thumb-post-btn" onclick="openQP('${safe}')">📤 Post</button>
+      </div>
+      <div class="img-info">
+        <div class="img-name" title="${safe}">${name}</div>
+        <div class="img-btns">
+          <button onclick="window.open('${safe}','_blank')" title="Open in new tab">🔗 Open</button>
+          <button onclick="copyUrl('${safe}')" title="Copy URL">📋 Copy</button>
+          <button onclick="openQP('${safe}')" title="Post to Telegram">📤</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function dlOne(url, name) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.target = '_blank';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function downloadAll() {
+  if (!shownImages.length) return;
+  const qty = parseInt(document.getElementById('dlQty').value) || shownImages.length;
+  const toDownload = shownImages.slice(0, qty);
+  toDownload.forEach((url, i) => {
+    setTimeout(() => dlOne(url, getName(url)), i * 400);
+  });
+  showStatus(`Downloading ${toDownload.length} of ${shownImages.length} image${toDownload.length !== 1 ? 's' : ''}... check your Downloads folder.`, 'ok');
+}
+
+function copyUrl(url) {
+  navigator.clipboard.writeText(url).then(() => {
+    showStatus('URL copied to clipboard!', 'ok');
+    setTimeout(hideStatus, 2000);
+  });
+}
+
+async function pasteUrl() {
+  try {
+    const t = await navigator.clipboard.readText();
+    if (t.trim()) document.getElementById('urlIn').value = t.trim();
+  } catch {
+    showStatus('Could not access clipboard — please paste manually (Ctrl+V)', 'warn');
+  }
+}
+
+function clearAll() {
+  document.getElementById('urlIn').value = '';
+  document.getElementById('keyword').value = '';
+  document.getElementById('dlQty').value = '';
+  allImages = [];
+  shownImages = [];
+  updateTgAvailCount();
+  imageSizes = {};
+  failCount = 0;
+  currentKeyword = '';
+  currentMinW = 0;
+  currentMinH = 0;
+  document.getElementById('minW').value = '';
+  document.getElementById('minH').value = '';
+  document.querySelector('#sizeToolbar .chip').classList.add('active');
+  ['pAny','p500','p800','pHD','pFHD'].forEach(id => document.getElementById(id).classList.remove('active'));
+  document.getElementById('pAny').classList.add('active');
+  allowedTypes = new Set(['jpg','png','webp','gif','svg']);
+  Object.values(TYPE_IDS).forEach(id => document.getElementById(id).classList.add('active'));
+  document.getElementById('tAll').classList.add('active');
+  document.getElementById('stats').style.display = 'none';
+  document.getElementById('toolbar').style.display = 'none';
+  document.getElementById('sizeToolbar').style.display = 'none';
+  setProgress(0);
+  hideStatus();
+  document.getElementById('grid').innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="icon">🔗</div><p>Enter a webpage URL above and click Extract</p></div>';
+}
+
+async function doExtract() {
+  const url = document.getElementById('urlIn').value.trim();
+  if (!url) { showStatus('Please enter a website URL first.', 'err'); return; }
+  if (!url.startsWith('http')) { showStatus('URL must start with http:// or https://', 'err'); return; }
+
+  allImages = [];
+  shownImages = [];
+  failCount = 0;
+  currentKeyword = document.getElementById('keyword').value.trim().toLowerCase();
+  document.getElementById('stats').style.display = 'grid';
+  document.getElementById('toolbar').style.display = 'none';
+  document.getElementById('extractBtn').disabled = true;
+  document.getElementById('grid').innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="icon">⏳</div><p>Fetching page...</p></div>';
+  setProgress(15);
+  showStatus('Connecting to page via proxy...', 'info');
+
+  const proxies = [
+    `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+    `https://corsproxy.io/?${encodeURIComponent(url)}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`
+  ];
+
+  let html = null;
+  for (let i = 0; i < proxies.length; i++) {
+    try {
+      showStatus(`Trying proxy ${i+1} of ${proxies.length}...`, 'info');
+      setProgress(15 + i * 15);
+      const r = await fetch(proxies[i], { signal: AbortSignal.timeout(12000) });
+      if (!r.ok) continue;
+      const ct = r.headers.get('content-type') || '';
+      if (ct.includes('json')) {
+        const d = await r.json();
+        html = d.contents || d.body || d.data || '';
+      } else {
+        html = await r.text();
+      }
+      if (html && html.length > 200) break;
+    } catch (e) { console.warn('Proxy failed:', proxies[i], e); }
+  }
+
+  setProgress(55);
+
+  if (!html || html.length < 100) {
+    showStatus('Could not fetch the page. The website may block external requests. Try opening DevTools (F12) → Network → Img tab on the site to find image URLs manually.', 'err');
+    document.getElementById('extractBtn').disabled = false;
+    setProgress(0);
+    document.getElementById('grid').innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="icon">❌</div><p>Page could not be loaded</p></div>';
+    return;
+  }
+
+  showStatus('Scanning for images...', 'info');
+  const found = new Set();
+  let base;
+  try { base = new URL(url); } catch { base = new URL('https://example.com'); }
+
+  function resolveUrl(src) {
+    src = src.trim().split(' ')[0];
+    if (!src || src.startsWith('data:')) return null;
+    if (src.startsWith('//')) return base.protocol + src;
+    if (src.startsWith('/')) return base.origin + src;
+    if (src.startsWith('http')) return src;
+    return base.origin + '/' + src;
+  }
+
+  const patterns = [
+    /\bsrc=["']([^"']+\.(?:jpe?g|png|gif|webp|svg|bmp|avif)[^"']*)/gi,
+    /\bhref=["']([^"']+\.(?:jpe?g|png|gif|webp|svg|bmp|avif)[^"']*)/gi,
+    /data-src=["']([^"']+\.(?:jpe?g|png|gif|webp)[^"']*)/gi,
+    /data-lazy(?:-src)?=["']([^"']+\.(?:jpe?g|png|gif|webp)[^"']*)/gi,
+    /data-original=["']([^"']+\.(?:jpe?g|png|gif|webp)[^"']*)/gi,
+    /data-full(?:-url)?=["']([^"']+\.(?:jpe?g|png|gif|webp)[^"']*)/gi,
+    /"url"\s*:\s*"([^"]+\.(?:jpe?g|png|gif|webp)[^"]*)"/gi,
+    /'url'\s*:\s*'([^']+\.(?:jpe?g|png|gif|webp)[^']*)'/gi,
+    /url\(["']?([^"')]+\.(?:jpe?g|png|gif|webp)[^"')]*)/gi,
+    /"([^"]*\/(?:uploads|images|img|photos|gallery|media|content)\/[^"]+\.(?:jpe?g|png|gif|webp))"/gi,
+    /\bsrcset=["']([^"']+)/gi,
+  ];
+
+  for (const pat of patterns) {
+    let m;
+    while ((m = pat.exec(html)) !== null) {
+      if (pat.source.includes('srcset')) {
+        m[1].split(',').forEach(part => {
+          const u = resolveUrl(part.trim().split(' ')[0]);
+          if (u && u.length < 600 && /\.(jpe?g|png|gif|webp|svg)(\?|$)/i.test(u)) found.add(u);
+        });
+      } else {
+        const u = resolveUrl(m[1]);
+        if (u && u.length < 600) found.add(u);
+      }
+    }
+  }
+
+  setProgress(80);
+  allImages = [...found].filter(u => /\.(jpe?g|png|gif|webp|svg|bmp|avif)(\?|$|&)/i.test(u));
+
+  // Smart grouping for update pages (e.g. /update/7402-Pure_Honey/):
+  // 1. Detect the CDN hash from the cover URL (e.g. b40553f4).
+  // 2. Find the updateThumbs base path using visible thumbnails (002.jpg, 004.jpg).
+  // 3. Generate the full thumbnail list 001.jpg–NNN.jpg — this recovers lazy-loaded
+  //    thumbnails (001, 003, etc.) that never appear in static HTML.
+  // 4. Exclude the cover image entirely (user wants thumbnails only).
+  const _numId = extractSlug(url).match(/^(\d+)/)?.[1];
+  if (_numId) {
+    const _cover = allImages.find(u => new RegExp(`/${_numId}[_.]`, 'i').test(u));
+    if (_cover) {
+      const _hashMatch = _cover.match(/\/([0-9a-f]{8})\//i);
+      if (_hashMatch) {
+        const _hash = _hashMatch[1];
+        const _thumbSample = allImages.find(u => u.includes('/updateThumbs/') && u.includes(_hash));
+        if (_thumbSample) {
+          // Base URL: .../updateThumbs/492/b40553f4/
+          const _baseUrl = _thumbSample.substring(0, _thumbSample.lastIndexOf('/') + 1);
+          // Detect highest visible thumb number to know total count (minimum 4)
+          const _knownNums = allImages
+            .filter(u => u.includes('/updateThumbs/') && u.includes(_hash))
+            .map(u => parseInt(u.match(/\/(\d{3})\.jpg/i)?.[1] || '0'))
+            .filter(n => n > 0);
+          const _maxThumb = Math.max(..._knownNums, 4);
+          // Generate 001.jpg … NNN.jpg — covers both static and lazy-loaded thumbnails
+          allImages = Array.from({ length: _maxThumb }, (_, i) =>
+            `${_baseUrl}${String(i + 1).padStart(3, '0')}.jpg`
+          );
+        } else {
+          // No updateThumbs found — remove cover, keep remaining hash images
+          allImages = allImages.filter(u => u.includes(_hash) && !u.includes('/covers/'));
+        }
+        document.getElementById('keyword').value = '';
+        currentKeyword = '';
+      }
+    }
+  }
+
+  if (!allImages.length) {
+    showStatus('No images found. This site may load images via JavaScript after page load (React/Vue/etc). Those cannot be extracted this way.', 'warn');
+    document.getElementById('extractBtn').disabled = false;
+    setProgress(0);
+    document.getElementById('toolbar').style.display = 'flex';
+    document.getElementById('sizeToolbar').style.display = 'flex';
+    document.getElementById('grid').innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="icon">🤷</div><p>No images detected in page HTML</p></div>';
+    updateStats(0);
+    return;
+  }
+
+  currentMinW = parseInt(document.getElementById('minW').value) || 0;
+  currentMinH = parseInt(document.getElementById('minH').value) || 0;
+  setProgress(100);
+  setTimeout(() => setProgress(0), 500);
+  document.getElementById('toolbar').style.display = 'flex';
+  document.getElementById('sizeToolbar').style.display = 'flex';
+  document.getElementById('extractBtn').disabled = false;
+  const sizeHint = (currentMinW || currentMinH) ? ` (min ${currentMinW}×${currentMinH}px)` : '';
+  showStatus(`✅ Found ${allImages.length} image${allImages.length !== 1 ? 's' : ''}${sizeHint}! Thumbnails loading below...`, 'ok');
+  renderGrid();
+  updateStats(allImages.length);
+  // Auto Post Mode: fire the full pipeline without any user interaction
+  autoRunPost();
+}
+
+document.getElementById('urlIn').addEventListener('input', e => {
+  const slug = extractSlug(e.target.value.trim());
+  // Use only the numeric prefix (e.g. "7401" from "7401-Meringue") so it matches
+  // CDN filenames like 7401_lg.jpg rather than failing to match anything.
+  const keyword = slug.match(/^(\d+)/)?.[1] || slug;
+  document.getElementById('keyword').value = keyword;
+  currentKeyword = keyword.toLowerCase();
+});
+document.getElementById('urlIn').addEventListener('keydown', e => { if (e.key === 'Enter') doExtract(); });
+
+// ── URL Watcher ──────────────────────────────────────────────────────────
+let uwIntervalId   = null;
+let uwMinutes      = 1;
+let uwLastUrls     = new Set();
+let isUwWatching   = false;
+let uwMuted        = false;
+let uwMode         = 'links'; // 'links' | 'images'
+
+function setUwMode(mode) {
+  uwMode = mode;
+  document.getElementById('uwModeLinks')?.classList.toggle('active',  mode === 'links');
+  document.getElementById('uwModeImages')?.classList.toggle('active', mode === 'images');
+  const hint = document.getElementById('uwModeHint');
+  if (hint) hint.textContent = mode === 'links'
+    ? 'Watches the listing page for new post URLs → opens each one → extracts images → auto-posts.'
+    : 'Watches the page for new image URLs → merges them into the grid → auto-posts.';
+}
+
+function setUwInterval(mins, btnId) {
+  uwMinutes = mins;
+  ['uwInt1','uwInt5','uwInt10','uwInt30','uwInt60'].forEach(id =>
+    document.getElementById(id)?.classList.toggle('active', id === btnId)
+  );
+  if (isUwWatching) {
+    clearInterval(uwIntervalId);
+    uwIntervalId = setInterval(pollUrlForNewImages, uwMinutes * 60000);
+  }
+}
+
+function toggleUwMute() {
+  uwMuted = !uwMuted;
+  document.getElementById('uwMuteBtn').textContent = uwMuted ? '🔇 Sound Off' : '🔊 Sound On';
+}
+
+function toggleUrlWatch() {
+  if (isUwWatching) stopUrlWatch(); else startUrlWatch();
+}
+
+async function startUrlWatch() {
+  const url = document.getElementById('urlWatchInput').value.trim();
+  if (!url || !url.startsWith('http')) {
+    document.getElementById('urlWatchLog').innerHTML =
+      '<span style="color:var(--red)">❌ Enter a valid URL starting with http://</span>';
+    return;
+  }
+
+  isUwWatching = true;
+  const btn   = document.getElementById('urlWatchBtn');
+  const badge = document.getElementById('urlWatchBadge');
+  btn.textContent = '⏳ Bootstrapping…'; btn.disabled = true;
+  badge.className = 'watch-idle'; badge.textContent = '⏳ Bootstrapping…';
+  document.getElementById('urlWatchLog').innerHTML =
+    `<span class="log-time">Fetching current state of <strong>${url}</strong>…</span>`;
+
+  // Bootstrap: snapshot current state so we only alarm on NEW content
+  const html = await fetchRawHtml(url);
+  const baseline = html
+    ? (uwMode === 'links' ? extractPageLinksFromHtml(html, url) : extractImagesFromHtml(html, url))
+    : [];
+  uwLastUrls = new Set(baseline);
+
+  btn.textContent = '⏹ Stop Watching'; btn.disabled = false; btn.style.background = 'var(--red)';
+  badge.className = 'watch-live'; badge.textContent = 'Watching…';
+  const baselineWord = uwMode === 'links' ? 'post links' : 'images';
+  document.getElementById('urlWatchLog').innerHTML =
+    `<span class="log-time">✅ Baseline: <strong>${uwLastUrls.size}</strong> ${baselineWord} seen. Checking every <strong>${uwMinutes} min</strong>…</span>`;
+
+  uwIntervalId = setInterval(pollUrlForNewImages, uwMinutes * 60000);
+}
+
+function stopUrlWatch() {
+  isUwWatching = false;
+  clearInterval(uwIntervalId); uwIntervalId = null;
+  const btn = document.getElementById('urlWatchBtn');
+  btn.textContent = '▶ Start Watching'; btn.style.background = ''; btn.disabled = false;
+  document.getElementById('urlWatchBadge').className = 'watch-idle';
+  document.getElementById('urlWatchBadge').textContent = '⏸ Idle';
+}
+
+// Fetch raw HTML from a URL via proxies
+async function fetchRawHtml(url) {
+  const proxies = [
+    `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+    `https://corsproxy.io/?${encodeURIComponent(url)}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+  ];
+  for (const proxy of proxies) {
+    try {
+      const r = await fetch(proxy, { signal: AbortSignal.timeout(15000) });
+      if (!r.ok) continue;
+      const ct = r.headers.get('content-type') || '';
+      const html = ct.includes('json') ? (await r.json()).contents : await r.text();
+      if (html && html.length > 200) return html;
+    } catch (_) {}
+  }
+  return null;
+}
+
+// Extract image URLs from HTML
+function extractImagesFromHtml(html, baseUrl) {
+  const found = new Set();
+  let base;
+  try { base = new URL(baseUrl); } catch { base = new URL('https://example.com'); }
+  function resolve(src) {
+    src = (src || '').trim().split(' ')[0];
+    if (!src || src.startsWith('data:')) return null;
+    if (src.startsWith('//')) return base.protocol + src;
+    if (src.startsWith('/'))  return base.origin + src;
+    if (src.startsWith('http')) return src;
+    return base.origin + '/' + src;
+  }
+  const pats = [
+    /\bsrc=["']([^"']+\.(?:jpe?g|png|gif|webp)[^"']*)/gi,
+    /\bhref=["']([^"']+\.(?:jpe?g|png|gif|webp)[^"']*)/gi,
+    /data-src=["']([^"']+\.(?:jpe?g|png|gif|webp)[^"']*)/gi,
+    /data-lazy(?:-src)?=["']([^"']+\.(?:jpe?g|png|gif|webp)[^"']*)/gi,
+    /"url"\s*:\s*"([^"]+\.(?:jpe?g|png|gif|webp)[^"]*)"/gi,
+    /\bsrcset=["']([^"']+)/gi,
+  ];
+  for (const pat of pats) {
+    let m;
+    while ((m = pat.exec(html)) !== null) {
+      if (pat.source.includes('srcset')) {
+        m[1].split(',').forEach(p => {
+          const u = resolve(p.trim().split(' ')[0]);
+          if (u && /\.(jpe?g|png|gif|webp)(\?|$)/i.test(u)) found.add(u);
+        });
+      } else {
+        const u = resolve(m[1]);
+        if (u) found.add(u);
+      }
+    }
+  }
+  return [...found].filter(u => /\.(jpe?g|png|gif|webp)(\?|$|&)/i.test(u));
+}
+
+// Extract internal page links (deeper path than the listing URL)
+function extractPageLinksFromHtml(html, baseUrl) {
+  const found = new Set();
+  let base;
+  try { base = new URL(baseUrl); } catch { return []; }
+  const pat = /href=["']([^"'#?]+)["']/gi;
+  let m;
+  while ((m = pat.exec(html)) !== null) {
+    let href = m[1].trim();
+    if (href.startsWith('//'))   href = base.protocol + href;
+    else if (href.startsWith('/')) href = base.origin + href;
+    else if (!href.startsWith('http')) href = base.origin + '/' + href;
+    try {
+      const u = new URL(href);
+      // Same domain, deeper path, not an image/file/resource
+      if (u.hostname === base.hostname &&
+          u.pathname.length > base.pathname.length &&
+          u.pathname !== base.pathname &&
+          !/\.(css|js|png|jpe?g|gif|webp|ico|svg|woff|pdf)(\?|$)/i.test(u.pathname)) {
+        found.add(u.origin + u.pathname); // strip query string
+      }
+    } catch (_) {}
+  }
+  return [...found];
+}
+
+async function fetchPageImages(url) {
+  const html = await fetchRawHtml(url);
+  if (!html) return [];
+  return extractImagesFromHtml(html, url);
+}
+
+async function pollUrlForNewImages() {
+  if (!isUwWatching) return;
+  const listingUrl = document.getElementById('urlWatchInput').value.trim();
+  const log        = document.getElementById('urlWatchLog');
+  const time       = new Date().toLocaleTimeString();
+
+  try {
+    const html = await fetchRawHtml(listingUrl);
+    if (!html) { log.innerHTML = `<span style="color:var(--red)">⚠️ ${time} — Could not fetch page (proxy blocked?)</span>`; return; }
+
+    if (uwMode === 'links') {
+      // ── Post Links mode: detect new page links ──────────────────────────
+      const linkFilter = (document.getElementById('uwLinkFilter')?.value || '').trim();
+      const allLinks   = extractPageLinksFromHtml(html, listingUrl);
+      const current    = linkFilter ? allLinks.filter(l => l.includes(linkFilter)) : allLinks;
+      const newLinks   = current.filter(u => !uwLastUrls.has(u));
+
+      if (newLinks.length === 0) {
+        log.innerHTML = `<span class="log-time">🔄 ${time} — No new posts (${current.length} links seen)</span>`;
+        return;
+      }
+
+      newLinks.forEach(u => uwLastUrls.add(u));
+
+      if (!uwMuted && typeof playAlarm === 'function') playAlarm(true);
+      if (typeof showBrowserNotification === 'function')
+        showBrowserNotification(`🔔 ${newLinks.length} new post${newLinks.length > 1 ? 's' : ''}!`, newLinks[0]);
+
+      log.innerHTML = `
+        <div>
+          <span class="log-time">🔔 ${time} — <strong style="color:var(--green)">${newLinks.length} new post${newLinks.length > 1 ? 's' : ''}</strong> detected!</span>
+          <div class="log-text">${newLinks.slice(0, 3).map(u => u.replace(/^https?:\/\/[^/]+/, '')).join('\n')}${newLinks.length > 3 ? `\n…+${newLinks.length - 3} more` : ''}</div>
+        </div>`;
+
+      // For each new post link: extract its images then auto-post
+      for (const postUrl of newLinks) {
+        log.innerHTML += `<div class="log-time" style="margin-top:6px">⏳ Extracting: <a href="${postUrl}" target="_blank" class="log-link">${postUrl.replace(/^https?:\/\/[^/]+/, '')}</a></div>`;
+
+        // Load post URL into the extractor input and run extract
+        document.getElementById('urlIn').value = postUrl;
+        const slug = extractSlug(postUrl);
+        const keyword = slug.match(/^(\d+)/)?.[1] || slug;
+        document.getElementById('keyword').value = keyword;
+        currentKeyword = keyword.toLowerCase();
+        await doExtract();
+
+        if (shownImages.length > 0) {
+          log.innerHTML += `<div class="log-time">✅ ${shownImages.length} image${shownImages.length !== 1 ? 's' : ''} extracted</div>`;
+          if (document.getElementById('uwAutoPostToggle')?.checked) {
+            log.innerHTML += `<div class="log-time">🤖 Auto posting ${shownImages.length} image${shownImages.length !== 1 ? 's' : ''}…</div>`;
+            await watchAutoPostAll(log);
+          }
+        } else {
+          log.innerHTML += `<div style="color:var(--muted);font-size:12px">⚠️ No images found on that page</div>`;
+        }
+      }
+
+    } else {
+      // ── Images mode: detect new image URLs on the listing page ──────────
+      const current = extractImagesFromHtml(html, listingUrl);
+      const newUrls = current.filter(u => !uwLastUrls.has(u));
+
+      if (newUrls.length === 0) {
+        log.innerHTML = `<span class="log-time">🔄 ${time} — No new images (${current.length} total)</span>`;
+        return;
+      }
+
+      newUrls.forEach(u => uwLastUrls.add(u));
+
+      if (!uwMuted && typeof playAlarm === 'function') playAlarm(true);
+      if (typeof showBrowserNotification === 'function')
+        showBrowserNotification(`🔔 ${newUrls.length} new image${newUrls.length > 1 ? 's' : ''}!`, listingUrl);
+
+      log.innerHTML = `
+        <div>
+          <span class="log-time">🔔 ${time} — <strong style="color:var(--green)">${newUrls.length} new image${newUrls.length > 1 ? 's' : ''}</strong> detected!</span>
+          <div class="log-text">${newUrls.slice(0, 3).map(u => u.split('/').pop()).join('\n')}${newUrls.length > 3 ? `\n…+${newUrls.length - 3} more` : ''}</div>
+        </div>`;
+
+      const merged = [...new Set([...allImages, ...newUrls])];
+      allImages   = merged; shownImages = merged;
+      renderGrid(); updateStats(allImages.length); updateTgAvailCount();
+      document.getElementById('stats').style.display = 'grid';
+      document.getElementById('toolbar').style.display = 'flex';
+      document.getElementById('sizeToolbar').style.display = 'flex';
+
+      if (document.getElementById('uwAutoPostToggle')?.checked) await watchAutoPostAll(log);
+    }
+
+  } catch (err) {
+    log.innerHTML = `<span style="color:var(--red)">⚠️ ${time} — ${err.message}</span>`;
+  }
+}
+
+async function pasteUrlWatch() {
+  try {
+    const t = await navigator.clipboard.readText();
+    if (t.trim()) document.getElementById('urlWatchInput').value = t.trim();
+  } catch {
+    document.getElementById('urlWatchLog').textContent = 'Could not access clipboard — paste manually';
+  }
+}
+
+function setUwTestUrl(url) {
+  document.getElementById('uwTestInput').value = url;
+}
+
+async function testUwUrl() {
+  const url = (document.getElementById('uwTestInput').value || '').trim();
+  if (!url || !url.startsWith('http')) return;
+
+  const btn    = document.getElementById('uwTestBtn');
+  const result = document.getElementById('uwTestResult');
+  btn.disabled = true; btn.textContent = '⏳ Testing…';
+  result.style.display = 'block';
+  result.innerHTML = '<span style="color:var(--muted)">Fetching via proxy…</span>';
+
+  try {
+    const html = await fetchRawHtml(url);
+    if (!html) {
+      result.innerHTML = `<div style="color:var(--red)">❌ Could not fetch — proxy blocked or site offline.<br>
+        <small>Try a different interval or check if the site allows external requests.</small></div>`;
+      return;
+    }
+
+    const links  = extractPageLinksFromHtml(html, url);
+    const images = extractImagesFromHtml(html, url);
+    const filter = (document.getElementById('uwLinkFilter')?.value || '').trim();
+    const filtered = filter ? links.filter(l => l.includes(filter)) : links;
+
+    const linkRows = filtered.slice(0, 15).map(l =>
+      `<div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+        <span style="color:var(--accent2);font-family:'DM Mono',monospace;font-size:11px;flex:1;
+              white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+              title="${l}">${l.replace(/^https?:\/\/[^/]+/, '')}</span>
+        <button class="btn-outline btn-sm" onclick="applyUwUrl('${l}')"
+          style="font-size:10px;padding:2px 8px;flex-shrink:0">Use</button>
+      </div>`
+    ).join('');
+
+    result.innerHTML = `
+      <div style="margin-bottom:8px">
+        <strong style="color:var(--green)">✅ Page reachable</strong>
+        <span style="color:var(--muted);margin-left:8px">(${(html.length/1024).toFixed(1)} KB)</span>
+      </div>
+      <div style="display:flex;gap:16px;margin-bottom:10px">
+        <span>🔗 <strong style="color:var(--text)">${links.length}</strong> links found
+          ${filter ? `<span style="color:var(--accent2)">(${filtered.length} match "<em>${filter}</em>")</span>` : ''}
+        </span>
+        <span>🖼 <strong style="color:var(--text)">${images.length}</strong> images found</span>
+      </div>
+      ${filtered.length > 0 ? `
+        <div style="color:var(--muted);font-size:11px;margin-bottom:4px">
+          Detected links — click <strong>Use</strong> to set as watch URL:
+        </div>
+        <div style="max-height:200px;overflow-y:auto">${linkRows}</div>
+        ${filtered.length > 15 ? `<div style="color:var(--muted);font-size:11px;margin-top:4px">…+${filtered.length - 15} more</div>` : ''}
+      ` : `<div style="color:var(--muted)">No links found${filter ? ` matching "${filter}"` : ''}</div>`}
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-outline btn-sm" onclick="applyUwUrl('${url}')" style="font-size:12px">
+          📌 Watch this URL (${url.replace(/^https?:\/\//, '')})
+        </button>
+        ${filter === '' && links.length > 0 ? `
+        <button class="btn-outline btn-sm" onclick="document.getElementById('uwLinkFilter').value='/update/';testUwUrl()" style="font-size:12px">
+          🔎 Try filter: /update/
+        </button>` : ''}
+      </div>`;
+
+  } catch (err) {
+    result.innerHTML = `<span style="color:var(--red)">❌ ${err.message}</span>`;
+  } finally {
+    btn.disabled = false; btn.textContent = '🔍 Test';
+  }
+}
+
+function applyUwUrl(url) {
+  document.getElementById('urlWatchInput').value = url;
+  document.getElementById('uwTestInput').value   = url;
+  // Open the Config panel to show it was applied
+  const panel = document.getElementById('uwConfigPanel');
+  if (panel && !panel.open) panel.open = false;
+  showStatus(`📌 Watch URL set: ${url}`, 'ok');
+  setTimeout(hideStatus, 3000);
+}
+
+// ── Watch Group ──────────────────────────────────────────────────────────
+let watchInterval  = null;
+let watchLastMsgId = 0;   // Telegram message ID cursor — more reliable than timestamps
+let watchGroupId   = '';
+let isWatching     = false;
+let watchMuted     = false;
+let audioCtx       = null; // initialised on first user gesture
+
+function toggleMute() {
+  watchMuted = !watchMuted;
+  document.getElementById('muteBtn').textContent = watchMuted ? '🔇 Sound Off' : '🔊 Sound On';
+}
+
+// Web Audio chime — 3 rising notes, no external file needed
+function playAlarm(force) {
+  if (watchMuted && !force) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const play = (freq, t, dur) => {
+      const osc  = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.type = 'sine'; osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.45, t + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.start(t); osc.stop(t + dur + 0.05);
+    };
+    const now = audioCtx.currentTime;
+    play(880,  now,        0.28);
+    play(1108, now + 0.18, 0.28);
+    play(1320, now + 0.36, 0.55);
+  } catch (_) {}
+}
+
+// Browser desktop notification
+function showBrowserNotification(title, body) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  try {
+    const n = new Notification(title, { body, silent: true });
+    setTimeout(() => n.close(), 8000);
+  } catch (_) {}
+}
+
+async function requestNotifPermission() {
+  if (!('Notification' in window)) return;
+  const hint = document.getElementById('notifHint');
+  if (Notification.permission === 'granted') {
+    if (hint) hint.textContent = '✅ Desktop notifications on';
+    return;
+  }
+  if (Notification.permission !== 'denied') {
+    const result = await Notification.requestPermission();
+    if (hint) hint.textContent = result === 'granted' ? '✅ Desktop notifications on' : '';
+  }
+}
+
+function toggleWatch() {
+  if (isWatching) stopWatch();
+  else startWatch();
+}
+
+async function startWatch() {
+  watchGroupId = document.getElementById('watchGroupSelect').value;
+  if (!watchGroupId) { showStatus('Select a group to watch first.', 'warn'); return; }
+
+  // Unlock AudioContext and request notification permission on this user gesture
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  requestNotifPermission();
+
+  isWatching = true;
+  const btn       = document.getElementById('watchBtn');
+  const badge     = document.getElementById('watchBadge');
+  const groupName = document.getElementById('watchGroupSelect').selectedOptions[0]?.text || watchGroupId;
+
+  btn.textContent = '⏳ Connecting…'; btn.disabled = true;
+  badge.className = 'watch-idle'; badge.textContent = '⏳ Connecting…';
+  document.getElementById('watchLog').innerHTML =
+    `<span class="log-time">Connecting to <strong>${groupName}</strong>…</span>`;
+
+  // Bootstrap: get the latest message ID that already exists — only NEW messages after this will trigger
+  try {
+    const res  = await fetch(
+      `${TG_API}/watch/baseline?channelId=${encodeURIComponent(watchGroupId)}`,
+      { signal: AbortSignal.timeout(10000) }
+    );
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Server error');
+    watchLastMsgId = data.latestMsgId || 0;
+  } catch (err) {
+    isWatching = false;
+    btn.textContent = '▶ Start Watching'; btn.disabled = false;
+    badge.className = 'watch-idle'; badge.textContent = '⏸ Idle';
+    document.getElementById('watchLog').innerHTML =
+      `<span style="color:var(--red)">⚠️ ${err.message}<br>
+       <small>Make sure you're logged in: <a href="telegram-bot-dashboard.html">Bot Manager → Account tab</a></small></span>`;
+    return;
+  }
+
+  btn.textContent = '⏹ Stop Watching'; btn.disabled = false;
+  btn.style.background = 'var(--red)';
+  badge.className = 'watch-live'; badge.textContent = 'Watching…';
+  document.getElementById('watchLog').innerHTML =
+    `<span class="log-time">✅ Watching <strong>${groupName}</strong> — waiting for a new message with a link…</span>`;
+
+  watchInterval = setInterval(pollForNewLink, 3000);
+}
+
+function stopWatch() {
+  isWatching = false;
+  clearInterval(watchInterval); watchInterval = null;
+  const btn   = document.getElementById('watchBtn');
+  const badge = document.getElementById('watchBadge');
+  btn.textContent = '▶ Start Watching';
+  btn.style.background = ''; btn.disabled = false;
+  badge.className = 'watch-idle'; badge.textContent = '⏸ Idle';
+}
+
+async function pollForNewLink() {
+  if (!isWatching) return;
+  try {
+    const res  = await fetch(
+      `${TG_API}/watch/latest-link?channelId=${encodeURIComponent(watchGroupId)}&sinceId=${watchLastMsgId}`,
+      { signal: AbortSignal.timeout(8000) }
+    );
+    const data = await res.json();
+
+    if (!res.ok) {
+      stopWatch();
+      document.getElementById('watchLog').innerHTML =
+        `<span style="color:var(--red)">⚠️ ${data.error || 'Server error'}<br>
+         <small><a href="telegram-bot-dashboard.html">Bot Manager → Account tab</a></small></span>`;
+      return;
+    }
+
+    // Always advance cursor to the true latest message ID so non-URL messages don't block us
+    if (data.latestMsgId && data.latestMsgId > watchLastMsgId) {
+      watchLastMsgId = data.latestMsgId;
+    }
+
+    if (!data.found) return;
+
+    // ── New link found! ──────────────────────────────
+    watchLastMsgId = data.messageId; // advance to this specific message
+
+    playAlarm();
+    const groupName = document.getElementById('watchGroupSelect').selectedOptions[0]?.text || watchGroupId;
+    showBrowserNotification(`🔔 New link in ${groupName}`, data.link);
+
+    const time    = new Date(data.date * 1000).toLocaleTimeString();
+    const preview = (data.text || '').replace(data.link, '').trim().slice(0, 140);
+    document.getElementById('watchLog').innerHTML = `
+      <div>
+        <span class="log-time">🔔 ${time}</span>
+        — <a class="log-link" href="${data.link}" target="_blank">${data.link}</a>
+        ${preview ? `<div class="log-text">${preview}</div>` : ''}
+      </div>`;
+
+    // Auto-extract — fill the URL field and fire immediately
+    document.getElementById('urlIn').value = data.link;
+    const slug = extractSlug(data.link);
+    document.getElementById('keyword').value = slug;
+    currentKeyword = slug.toLowerCase();
+    doExtract();
+
+  } catch (_) {
+    // Network hiccup — silently retry on next tick
+  }
+}
+
+// ── Telegram Link Sender ──────────────────────────────────────────────────
+const TG_API = window.location.protocol === 'file:'
+  ? 'http://localhost:3000/api'
+  : `${window.location.origin}/api`;
+
+let tgChannels = [];
+
+async function loadTelegramGroups() {
+  const btn = document.getElementById('tgRefreshBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳';
+  try {
+    const res = await fetch(`${TG_API}/channels`, { signal: AbortSignal.timeout(6000) });
+    if (!res.ok) throw new Error('Server returned ' + res.status);
+    tgChannels = await res.json();
+    // Cache for offline / cross-page use
+    try { localStorage.setItem('tgBotChannels', JSON.stringify(tgChannels)); } catch (_) {}
+    renderTgGroupList(null, false);
+  } catch (_) {
+    // Fall back to channels saved by telegram-bot-dashboard.html
+    try {
+      const cached = JSON.parse(localStorage.getItem('tgBotChannels') || '[]');
+      tgChannels = Array.isArray(cached) ? cached : [];
+    } catch (_) { tgChannels = []; }
+    renderTgGroupList(null, tgChannels.length === 0);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔄 Refresh';
+  }
+}
+
+function renderTgGroupList(_, noServer) {
+  const container = document.getElementById('tgGroupList');
+  if (noServer) {
+    container.innerHTML = `<div style="text-align:center;padding:1.5rem;color:var(--muted);font-size:13px">
+      <div style="font-size:28px;margin-bottom:6px;opacity:.5">⚠️</div>
+      <p>No channels found.<br>
+      Open <a href="telegram-bot-dashboard.html">Bot Manager</a> → Channels tab to add groups,<br>
+      or run <code style="background:var(--surface);padding:1px 5px;border-radius:4px">npm start</code> then click 🔄 Refresh.</p>
+    </div>`;
+    updateTgSelectedCount();
+    return;
+  }
+  if (tgChannels.length === 0) {
+    container.innerHTML = `<div style="text-align:center;padding:1.5rem;color:var(--muted);font-size:13px">
+      <div style="font-size:28px;margin-bottom:6px;opacity:.4">📭</div>
+      <p>No channels or groups added yet.<br>
+      Go to <a href="telegram-bot-dashboard.html">Bot Manager</a> → Channels tab to add them.</p>
+    </div>`;
+    updateTgSelectedCount();
+    return;
+  }
+  const prevChecked = new Set(
+    Array.from(document.querySelectorAll('input[name="tgChannel"]:checked')).map(el => el.value)
+  );
+  const onlyChannels = tgChannels.filter(ch => ch.channelType !== 'group');
+  if (onlyChannels.length === 0) {
+    container.innerHTML = `<div style="text-align:center;padding:1.5rem;color:var(--muted);font-size:13px">
+      <div style="font-size:28px;margin-bottom:6px;opacity:.4">📭</div>
+      <p>No channels added yet.<br>
+      Go to <a href="telegram-bot-dashboard.html">Bot Manager</a> → Channels tab to add a channel (📢).</p>
+    </div>`;
+    updateTgSelectedCount();
+    populateWatchSelect();
+    return;
+  }
+  container.innerHTML = onlyChannels.map(ch => {
+    const checked = prevChecked.has(ch.channelId);
+    return `<label class="tg-group-item${checked ? ' selected' : ''}" id="tglbl_${CSS.escape(ch.channelId)}">
+      <input type="checkbox" name="tgChannel" value="${ch.channelId}" ${checked ? 'checked' : ''} onchange="onTgGroupCheck(this)">
+      <div style="flex:1;min-width:0">
+        <div class="tg-group-name">📢 ${ch.channelName}${ch.auto ? ' <span style="font-size:10px;color:var(--accent2)">●</span>' : ''}</div>
+        <div class="tg-group-id">${ch.channelId}</div>
+      </div>
+    </label>`;
+  }).join('');
+  updateTgSelectedCount();
+  populateWatchSelect();
+}
+
+function populateWatchSelect() {
+  const sel    = document.getElementById('watchGroupSelect');
+  const prevId = sel.value;
+  sel.innerHTML = '<option value="">-- Select group to watch --</option>';
+  tgChannels.filter(ch => ch.channelType === 'group').forEach(ch => {
+    const opt       = document.createElement('option');
+    opt.value       = ch.channelId;
+    opt.textContent = `👥 ${ch.channelName}`;
+    sel.appendChild(opt);
+  });
+  if (prevId) sel.value = prevId; // restore selection after refresh
+}
+
+function onTgGroupCheck(cb) {
+  const lbl = cb.closest('label');
+  if (cb.checked) lbl.classList.add('selected'); else lbl.classList.remove('selected');
+  updateTgSelectedCount();
+}
+
+function updateTgSelectedCount() {
+  const n = document.querySelectorAll('input[name="tgChannel"]:checked').length;
+  const el = document.getElementById('tgSelectedCount');
+  if (el) el.textContent = n === 0 ? ' (none selected)' : ` (${n} selected)`;
+}
+
+function selectAllTgGroups(select) {
+  document.querySelectorAll('input[name="tgChannel"]').forEach(cb => {
+    cb.checked = select;
+    const lbl = cb.closest('label');
+    if (lbl) { if (select) lbl.classList.add('selected'); else lbl.classList.remove('selected'); }
+  });
+  updateTgSelectedCount();
+}
+
+// ── Auto Post — state ────────────────────────────────────────────────────
+let tgPostOptions  = { spoiler: false };
+let tgPostSchedule = null; // datetime-local string, or null = post immediately
+let tgGroupSize    = 1;    // images per post: 1 = single, 2-5 = album
+
+function setTgGroupSize(n) {
+  tgGroupSize = n;
+  [1,2,3,4,5].forEach(i => {
+    const btn = document.getElementById(`grpBtn${i}`);
+    if (btn) btn.classList.toggle('active', i === n);
+  });
+}
+
+// Called from renderGrid() and clearAll() to keep banner up-to-date
+function updateTgAvailCount() {
+  const n  = shownImages.length;
+  const el = document.getElementById('tgAvailText');
+  if (!el) return;
+  if (n === 0) {
+    el.style.color = 'var(--muted)';
+    el.textContent = 'No images yet — extract images with the URL field above first.';
+    const ta = document.getElementById('tgSharedCaption');
+    if (ta) { ta.value = ''; ta.placeholder = 'Caption auto-generates with emoji when images are extracted…'; }
+  } else {
+    el.style.color = 'var(--green)';
+    el.textContent = `${n} image${n !== 1 ? 's' : ''} available from the grid above.`;
+    // Auto-generate caption from a random image whenever the pool changes
+    tgRefreshCaption();
+  }
+}
+
+async function tgRefreshCaption() {
+  if (!shownImages.length) return;
+  const btn = document.getElementById('tgCaptionRefreshBtn');
+  const ta  = document.getElementById('tgSharedCaption');
+  if (!ta) return;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳…'; }
+  ta.placeholder = '✨ Generating caption with emoji…';
+  ta.value = '';
+
+  // Pick a random image from the current pool
+  const imgUrl = shownImages[Math.floor(Math.random() * shownImages.length)];
+
+  try {
+    const fr = await fetch(`${TG_API}/fetch-image`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: imgUrl }),
+      signal: AbortSignal.timeout(15000),
+    });
+    const fd = await fr.json();
+    if (!fd.success) throw new Error(fd.error || 'Image fetch failed');
+
+    const cr = await fetch(`${TG_API}/ai/caption`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imageBase64: fd.base64, mimeType: fd.mimeType,
+        prompt: 'Write a caption with 8-12 relevant emoji mixed naturally throughout — at the start, between sentences, and at the end.',
+        tone: 'engaging', language: 'English',
+      }),
+    });
+    const cd = await cr.json();
+    if (cd.success && cd.caption) {
+      ta.value = cd.caption;
+      ta.placeholder = 'Caption auto-generated — edit if needed…';
+    } else {
+      throw new Error(cd.error || 'No caption returned');
+    }
+  } catch (err) {
+    ta.placeholder = `⚠️ Caption failed: ${err.message} — type manually or click ✨ Refresh`;
+    console.warn('[tgRefreshCaption]', err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '✨ Refresh Caption'; }
+  }
+}
+
+// Called by Watch URL when a new post is detected — posts ALL extracted images immediately
+async function watchAutoPostAll(logEl) {
+  if (!shownImages.length) return;
+
+  // Use pre-selected channels; if none selected, auto-select all
+  let selected = Array.from(document.querySelectorAll('input[name="tgChannel"]:checked')).map(el => el.value);
+  if (!selected.length) {
+    selectAllTgGroups(true);
+    selected = Array.from(document.querySelectorAll('input[name="tgChannel"]:checked')).map(el => el.value);
+  }
+  if (!selected.length) {
+    const msg = '⚠️ No channels selected — open the Auto Post section and select at least one channel';
+    if (logEl) logEl.innerHTML += `<div style="color:var(--red);font-size:12px">${msg}</div>`;
+    showStatus(msg, 'warn');
+    return;
+  }
+
+  const urls = [...shownImages];
+
+  // Generate AI caption from the first image
+  let caption = '';
+  try {
+    const fr = await fetch(`${TG_API}/fetch-image`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: urls[0] }),
+      signal: AbortSignal.timeout(15000),
+    });
+    const fd = await fr.json();
+    if (fd.success) {
+      const cr = await fetch(`${TG_API}/ai/caption`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageBase64: fd.base64, mimeType: fd.mimeType,
+          prompt: 'Write a caption with 8-12 relevant emoji mixed naturally throughout — at the start, between sentences, and at the end.',
+          tone: 'engaging', language: 'English',
+        }),
+      });
+      const cd = await cr.json();
+      if (cd.success && cd.caption) caption = cd.caption;
+    }
+  } catch (_) {}
+
+  let ok = 0, fail = 0;
+  for (const chId of selected) {
+    const chName = tgChannels.find(c => c.channelId === chId)?.channelName || chId;
+    try {
+      let r;
+      if (urls.length > 1) {
+        // Send all images as one album
+        r = await fetch(`${TG_API}/post-album-urls`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ channelId: chId, urls, caption: caption || undefined, sendWithoutSound: false }),
+        });
+      } else {
+        const fr2 = await fetch(`${TG_API}/fetch-image`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: urls[0] }),
+          signal: AbortSignal.timeout(20000),
+        });
+        const fd2 = await fr2.json();
+        if (!fd2.success) throw new Error(fd2.error || 'Image download failed');
+        r = await fetch(`${TG_API}/post-photo`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ channelId: chId, base64: fd2.base64, mimeType: fd2.mimeType, caption: caption || undefined, sendWithoutSound: false }),
+        });
+      }
+      const d = await r.json();
+      if (!d.success) throw new Error(d.error || 'Unknown error');
+      ok++;
+    } catch (e) {
+      fail++;
+      const msg = `${chName}: ${e.message}`;
+      if (logEl) logEl.innerHTML += `<div style="color:var(--red);font-size:12px">❌ ${msg}</div>`;
+      console.warn('[watchAutoPostAll]', msg);
+    }
+  }
+
+  const verb = fail === 0 ? '✅' : '⚠️';
+  const result = fail === 0
+    ? `${verb} Posted ${urls.length} image${urls.length !== 1 ? 's' : ''} to ${ok} channel${ok !== 1 ? 's' : ''}!`
+    : `${verb} ${ok} ok · ${fail} failed`;
+  if (logEl) logEl.innerHTML += `<div class="log-time" style="color:var(--green)">${result}</div>`;
+  showStatus(result, fail === 0 ? 'ok' : 'warn');
+}
+
+// Fully automatic flow — triggered at the end of doExtract() when images are ready
+async function autoRunPost() {
+  if (!document.getElementById('tgAutoMode')?.checked) return;
+  if (!shownImages.length) return;
+
+  // Scroll to the auto-post section so user can see what's happening
+  document.getElementById('tgAutoMode')?.closest('.card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  await _delay(600);
+
+  // 1. Select ALL channels
+  selectAllTgGroups(true);
+  _flashBtn('tgRefreshBtn', '✅ Channels selected');
+  await _delay(400);
+
+  // 2. Generate AI caption with emoji (waits for result)
+  await tgRefreshCaption();
+  await _delay(300);
+
+  // 3. Randomize options
+  tgRandomOptions();
+  await _delay(400);
+
+  // 4. Randomize schedule (async — fetches existing scheduled messages)
+  await tgRandomSchedule();
+  await _delay(400);
+
+  // 4. Fire the post
+  await tgAutoPost();
+}
+
+function _delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function _flashBtn(id, label) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const orig = el.textContent;
+  el.textContent = label;
+  setTimeout(() => { el.textContent = orig; }, 1200);
+}
+
+// Dims/enables star inputs based on the active radio option
+function onStarModeChange() {
+  const mode = document.querySelector('input[name="tgStarMode"]:checked')?.value || 'free';
+  const fixedEl = document.getElementById('tgStarsFixed');
+  const minEl   = document.getElementById('tgStarsMin');
+  const maxEl   = document.getElementById('tgStarsMax');
+  const active  = '1';   const inactive = '.4';
+  fixedEl.style.opacity       = mode === 'fixed'  ? active : inactive;
+  fixedEl.style.pointerEvents = mode === 'fixed'  ? ''     : 'none';
+  minEl.style.opacity = maxEl.style.opacity       = mode === 'range'  ? active : inactive;
+  minEl.style.pointerEvents = maxEl.style.pointerEvents = mode === 'range' ? '' : 'none';
+}
+
+// Returns {makeContentPaid, starsCount} based on the currently selected Post Mode
+function getStarPostParams() {
+  const mode = document.querySelector('input[name="tgStarMode"]:checked')?.value || 'free';
+  if (mode === 'fixed') {
+    const stars = Math.max(1, Math.min(2500, parseInt(document.getElementById('tgStarsFixed')?.value) || 5));
+    return { makeContentPaid: true, starsCount: stars };
+  }
+  if (mode === 'random') {
+    const isPaid = Math.random() < 0.5;
+    const stars  = isPaid ? Math.max(1, Math.min(2500, parseInt(document.getElementById('tgStarsFixed')?.value) || 5)) : 0;
+    return { makeContentPaid: isPaid, starsCount: stars };
+  }
+  if (mode === 'range') {
+    const min   = Math.max(1, parseInt(document.getElementById('tgStarsMin')?.value) || 1);
+    const max   = Math.max(min, Math.min(2500, parseInt(document.getElementById('tgStarsMax')?.value) || 50));
+    const stars = min + Math.floor(Math.random() * (max - min + 1));
+    return { makeContentPaid: true, starsCount: stars };
+  }
+  return { makeContentPaid: false, starsCount: 0 }; // free
+}
+
+function tgRandomOptions() {
+  tgPostOptions.spoiler = Math.random() < 0.5;
+  const sp = tgPostOptions.spoiler ? '👁️ Spoiler' : '📢 No Spoiler';
+  _tgBadgeSet('opt', `🎲 ${sp}`);
+}
+
+async function tgRandomSchedule() {
+  let baseMs = Date.now();
+  try {
+    const r    = await fetch(`${TG_API}/scheduled`);
+    const msgs = await r.json();
+    const ft   = msgs.map(m => new Date(m.scheduledTime).getTime()).filter(t => t > Date.now());
+    if (ft.length > 0) baseMs = Math.max(...ft);
+  } catch (_) {}
+
+  const randMin  = 3 + Math.floor(Math.random() * 58);
+  const target   = new Date(baseMs + randMin * 60000);
+  const p        = n => String(n).padStart(2, '0');
+  tgPostSchedule = `${target.getFullYear()}-${p(target.getMonth()+1)}-${p(target.getDate())}T${p(target.getHours())}:${p(target.getMinutes())}`;
+
+  document.getElementById('tgSendBtn').textContent =
+    `🚀 Auto Post — starts ${target.toLocaleTimeString()}`;
+  _tgBadgeSet('sched', `⏰ starts +${randMin}min → ${target.toLocaleTimeString()}`);
+}
+
+function _tgBadgeSet(key, text) {
+  const wrap = document.getElementById('tgOptionBadge');
+  let el = wrap.querySelector(`[data-key="${key}"]`);
+  if (!el) {
+    el = document.createElement('span');
+    el.dataset.key = key;
+    el.style.cssText = 'font-size:12px;padding:4px 12px;border-radius:20px;background:rgba(108,99,255,.2);color:var(--accent2)';
+    wrap.appendChild(el);
+  }
+  el.textContent = text;
+}
+
+function showTgStatus(msg, type) {
+  const s = document.getElementById('tgStatus');
+  s.textContent = msg;
+  s.className   = 'status ' + type;
+  if (type !== 'info') setTimeout(() => { s.className = 'status'; }, 7000);
+}
+
+async function tgAutoPost() {
+  const selected = Array.from(document.querySelectorAll('input[name="tgChannel"]:checked')).map(el => el.value);
+  if (!selected.length)    { showTgStatus('❌ Select at least one channel', 'err'); return; }
+  if (!shownImages.length) { showTgStatus('❌ No images in grid — extract images first', 'err'); return; }
+
+  // How many images to pick total
+  const qtyMin = Math.max(1, parseInt(document.getElementById('tgQtyMin').value) || 1);
+  const qtyMax = Math.max(qtyMin, parseInt(document.getElementById('tgQtyMax').value) || 3);
+  const qty    = Math.min(qtyMin + Math.floor(Math.random() * (qtyMax - qtyMin + 1)), shownImages.length);
+
+  // Shuffle and slice, then split into chunks of tgGroupSize
+  const picked = [...shownImages].sort(() => Math.random() - 0.5).slice(0, qty);
+  const gs     = Math.max(1, Math.min(tgGroupSize, 5));
+  const chunks = [];
+  for (let i = 0; i < picked.length; i += gs) chunks.push(picked.slice(i, i + gs));
+
+  const btn      = document.getElementById('tgSendBtn');
+  const prog     = document.getElementById('tgProgress');
+  const progBar  = document.getElementById('tgProgressBar');
+  const progText = document.getElementById('tgProgressText');
+
+  btn.disabled        = true;
+  prog.style.display  = 'block';
+  progBar.style.width = '0%';
+  const postWord = gs > 1 ? 'album' : 'image';
+  showTgStatus(`🚀 Posting ${chunks.length} ${postWord}${chunks.length > 1 ? 's' : ''} (${qty} images) to ${selected.length} channel${selected.length > 1 ? 's' : ''}…`, 'info');
+
+  const p          = n => String(n).padStart(2, '0');
+  const toLocalStr = d => `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  let nextMs       = tgPostSchedule ? new Date(tgPostSchedule).getTime() : 0;
+
+  let ok = 0, fail = 0;
+  const errLog = []; // collect real error messages
+
+  for (let ci = 0; ci < chunks.length; ci++) {
+    const chunk = chunks[ci];
+    progBar.style.width  = `${Math.round((ci / chunks.length) * 100)}%`;
+    progText.textContent = `⏳ Post ${ci + 1} / ${chunks.length} — preparing…`;
+
+    // Schedule slot for this post
+    let thisSchedule = null;
+    if (nextMs > 0) {
+      thisSchedule = toLocalStr(new Date(nextMs));
+      if (ci < chunks.length - 1) nextMs += (3 + Math.floor(Math.random() * 13)) * 60000;
+    }
+
+    // 1. Generate a unique AI caption for each post from its own first image
+    progText.textContent = `⏳ Post ${ci + 1} / ${chunks.length} — generating caption ${ci + 1}…`;
+    let caption = '';
+    try {
+      const fr = await fetch(`${TG_API}/fetch-image`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: chunk[0] }),
+        signal: AbortSignal.timeout(15000),
+      });
+      const fd = await fr.json();
+      if (fd.success) {
+        const cr = await fetch(`${TG_API}/ai/caption`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageBase64: fd.base64, mimeType: fd.mimeType,
+            prompt: 'Write a caption with 8-12 relevant emoji mixed naturally throughout — at the start, between sentences, and at the end.',
+            tone: 'engaging', language: 'English',
+          }),
+        });
+        const cd = await cr.json();
+        if (cd.success) {
+          caption = cd.caption;
+          progText.textContent = `⏳ Post ${ci + 1} / ${chunks.length} — caption ${ci + 1} ready ✅`;
+        } else {
+          console.warn('[caption]', cd.error);
+          showTgStatus(`⚠️ AI caption ${ci + 1}: ${cd.error}`, 'warn');
+        }
+      } else {
+        console.warn('[caption] fetch-image:', fd.error);
+      }
+    } catch (capErr) {
+      console.warn('[caption]', capErr.message);
+    }
+
+    // 2. Post to each selected channel
+    progText.textContent = `⏳ Post ${ci + 1} / ${chunks.length} — posting ${chunk.length} image${chunk.length > 1 ? 's' : ''}…`;
+
+    // Resolve star params once per chunk so random/range stays consistent per post
+    const _sp = getStarPostParams();
+
+    for (const chId of selected) {
+      // Find readable channel name for error messages
+      const chName = tgChannels.find(c => c.channelId === chId)?.channelName || chId;
+      try {
+        let r;
+        if (chunk.length > 1) {
+          // Album: pass URLs directly — server handles Telegram download/upload
+          r = await fetch(`${TG_API}/post-album-urls`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              channelId: chId, urls: chunk,
+              caption: caption || undefined,
+              hideWithSpoiler: tgPostOptions.spoiler,
+              makeContentPaid: _sp.makeContentPaid,
+              starsCount: _sp.starsCount,
+              sendWithoutSound: false, scheduledTime: thisSchedule,
+            }),
+          });
+        } else {
+          // Single image: fetch base64 → post-photo
+          const fr2 = await fetch(`${TG_API}/fetch-image`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: chunk[0] }),
+            signal: AbortSignal.timeout(20000),
+          });
+          const fd2 = await fr2.json();
+          if (!fd2.success) throw new Error(fd2.error || 'Image download failed');
+          r = await fetch(`${TG_API}/post-photo`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              channelId: chId, base64: fd2.base64, mimeType: fd2.mimeType,
+              caption: caption || undefined,
+              hideWithSpoiler: tgPostOptions.spoiler,
+              makeContentPaid: _sp.makeContentPaid,
+              starsCount: _sp.starsCount,
+              sendWithoutSound: false, scheduledTime: thisSchedule,
+            }),
+          });
+        }
+        const d = await r.json();
+        if (!d.success) throw new Error(d.error || 'Unknown error');
+      } catch (err) {
+        fail++;
+        const msg = `${chName}: ${err.message}`;
+        errLog.push(msg);
+        console.warn('[tgAutoPost]', msg);
+      }
+    }
+    ok++;
+  }
+
+  progBar.style.width = '100%';
+  const verb = tgPostSchedule ? 'scheduled' : 'posted';
+  if (fail === 0) {
+    progText.textContent = `✅ ${ok} ${postWord}${ok > 1 ? 's' : ''} ${verb}.`;
+    showTgStatus(`✅ ${ok} ${postWord}${ok > 1 ? 's' : ''} ${verb} to ${selected.length} channel${selected.length > 1 ? 's' : ''}!`, 'ok');
+  } else {
+    // Show the real error from the first failure
+    const firstErr = errLog[0] || 'Unknown error';
+    progText.textContent = `⚠️ ${ok} ok · ${fail} failed — ${firstErr}`;
+    showTgStatus(`⚠️ ${ok} ok · ${fail} failed: ${firstErr}`, 'warn');
+    console.table(errLog);
+  }
+
+  document.getElementById('tgOptionBadge').innerHTML = '';
+  tgPostOptions  = { spoiler: false };
+  tgPostSchedule = null;
+  btn.disabled   = false;
+  btn.textContent = '🚀 Auto Post Random Images';
+}
+
+document.addEventListener('DOMContentLoaded', loadTelegramGroups);
+
+// ── Quick Post ────────────────────────────────────────────────────────────
+let qpImageUrl   = '';
+let qpOptions    = { spoiler: false, paid: false, stars: 10 };
+let qpSchedule   = null;        // ISO string or null
+let qpScheduledMsgs = [];       // cache of existing schedules for chain calculation
+
+function openQP(url) {
+  qpImageUrl  = url;
+  qpOptions   = { spoiler: false, paid: false, stars: 10 };
+  qpSchedule  = null;
+
+  document.getElementById('qpPreview').src    = url;
+  document.getElementById('qpCaption').value  = '';
+  document.getElementById('qpOptionBadge').innerHTML = '';
+  document.getElementById('qpStatus').className = 'status';
+  document.getElementById('qpSchedule') && (document.getElementById('qpSchedule').value = '');
+
+  // Render channel list
+  const list = document.getElementById('qpChannelList');
+  if (tgChannels.length === 0) {
+    list.innerHTML = `<p style="color:var(--muted);font-size:12px;padding:8px">No channels loaded — click 🔄 Refresh above.</p>`;
+  } else {
+    list.innerHTML = tgChannels.map(ch => {
+      const icon = ch.channelType === 'group' ? '👥' : '📢';
+      return `<label class="qp-ch-item" id="qplbl_${CSS.escape(ch.channelId)}">
+        <input type="checkbox" name="qpCh" value="${ch.channelId}" onchange="qpChChange(this)">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${icon} ${ch.channelName}</div>
+          <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">${ch.channelId}</div>
+        </div>
+      </label>`;
+    }).join('');
+  }
+  qpUpdateSelCount();
+
+  document.getElementById('qpModal').classList.add('open');
+  document.getElementById('qpBackdrop').classList.add('open');
+
+  // Auto-generate caption immediately (non-blocking)
+  setTimeout(qpAutoCaption, 300);
+}
+
+function closeQP() {
+  document.getElementById('qpModal').classList.remove('open');
+  document.getElementById('qpBackdrop').classList.remove('open');
+}
+
+function qpChChange(cb) {
+  const lbl = cb.closest('label');
+  if (cb.checked) lbl.classList.add('checked'); else lbl.classList.remove('checked');
+  qpUpdateSelCount();
+}
+
+function qpUpdateSelCount() {
+  const n = document.querySelectorAll('input[name="qpCh"]:checked').length;
+  document.getElementById('qpSelCount').textContent = n === 0 ? ' (none)' : ` (${n} selected)`;
+}
+
+function qpSelAll(sel) {
+  document.querySelectorAll('input[name="qpCh"]').forEach(cb => {
+    cb.checked = sel;
+    const lbl = cb.closest('label');
+    if (lbl) sel ? lbl.classList.add('checked') : lbl.classList.remove('checked');
+  });
+  qpUpdateSelCount();
+}
+
+function qpRandomOptions() {
+  const pick = Math.floor(Math.random() * 3); // 0=spoiler 1=paid 2=both
+  qpOptions.spoiler = (pick === 0 || pick === 2);
+  qpOptions.paid    = (pick === 1 || pick === 2);
+  qpOptions.stars   = Math.max(1, Math.min(2500, parseInt(document.getElementById('tgStarsFixed')?.value) || 5));
+
+  const labels = ['👁️ Spoiler', `⭐ Paid (${qpOptions.stars} Stars)`, `👁️ Spoiler + ⭐ Paid (${qpOptions.stars} Stars)`];
+  document.getElementById('qpOptionBadge').innerHTML =
+    `<span class="qp-option-badge">🎲 ${labels[pick]}</span>`;
+}
+
+async function qpRandomSchedule() {
+  // Try to fetch current scheduled messages for chain scheduling
+  try {
+    const r  = await fetch(`${TG_API}/scheduled`);
+    qpScheduledMsgs = await r.json();
+  } catch (_) {}
+
+  let baseMs = Date.now();
+  const futureTimes = (qpScheduledMsgs || [])
+    .map(m => new Date(m.scheduledTime).getTime())
+    .filter(t => t > Date.now());
+  const hasChain = futureTimes.length > 0;
+  if (hasChain) baseMs = Math.max(...futureTimes);
+
+  const randMin = 3 + Math.floor(Math.random() * 58);
+  const target  = new Date(baseMs + randMin * 60000);
+  const p = n => String(n).padStart(2, '0');
+  qpSchedule = `${target.getFullYear()}-${p(target.getMonth()+1)}-${p(target.getDate())}T${p(target.getHours())}:${p(target.getMinutes())}`;
+
+  const sendBtn = document.getElementById('qpSendBtn');
+  sendBtn.textContent = `📤 Schedule +${randMin}min → ${target.toLocaleTimeString()}`;
+
+  const badge = document.getElementById('qpOptionBadge');
+  badge.innerHTML = (badge.innerHTML || '') +
+    `<span class="qp-option-badge" style="margin-left:4px">⏰ +${randMin}min ${hasChain ? '(after last)' : '(from now)'}</span>`;
+}
+
+async function qpAutoCaption() {
+  const btn = document.getElementById('qpAiBtn');
+  btn.disabled = true; btn.textContent = '⏳ Generating…';
+  try {
+    // Fetch the image as base64 first
+    const fr  = await fetch(`${TG_API}/fetch-image`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: qpImageUrl }),
+    });
+    const fd  = await fr.json();
+    if (!fd.success) throw new Error(fd.error);
+
+    const res = await fetch(`${TG_API}/ai/caption`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imageBase64: fd.base64,
+        mimeType:    fd.mimeType,
+        prompt:      'Write a caption with at least 4-6 relevant emoji mixed naturally into the text.',
+        tone:        'engaging',
+        language:    'English',
+      }),
+    });
+    const data = await res.json();
+    if (data.success && data.caption) {
+      document.getElementById('qpCaption').value = data.caption;
+    } else {
+      document.getElementById('qpCaption').placeholder = `⚠️ Caption failed: ${data.error || 'Unknown error'} — type manually`;
+      console.warn('[qpAutoCaption]', data.error);
+    }
+  } catch (err) {
+    document.getElementById('qpCaption').placeholder = `⚠️ ${err.message} — type manually`;
+    console.warn('[qpAutoCaption]', err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '✨ AI Caption + Emoji';
+  }
+}
+
+async function qpSend() {
+  const selected = Array.from(document.querySelectorAll('input[name="qpCh"]:checked')).map(el => el.value);
+  if (selected.length === 0) { qpShowStatus('❌ Select at least one channel', 'err'); return; }
+
+  const btn = document.getElementById('qpSendBtn');
+  btn.disabled = true; btn.textContent = '⏳ Fetching image…';
+  qpShowStatus('Downloading image…', 'info');
+
+  try {
+    // Step 1: fetch image as base64
+    const fr  = await fetch(`${TG_API}/fetch-image`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: qpImageUrl }),
+    });
+    const fd  = await fr.json();
+    if (!fd.success) throw new Error(fd.error);
+
+    btn.textContent = '⏳ Posting…';
+    qpShowStatus(`Posting to ${selected.length} channel${selected.length > 1 ? 's' : ''}…`, 'info');
+
+    const caption = document.getElementById('qpCaption').value.trim();
+
+    // Step 2: post to each selected channel
+    let ok = 0, fail = 0;
+    for (const chId of selected) {
+      try {
+        const r = await fetch(`${TG_API}/post-photo`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            channelId:       chId,
+            base64:          fd.base64,
+            mimeType:        fd.mimeType,
+            caption:         caption || undefined,
+            hideWithSpoiler: qpOptions.spoiler,
+            makeContentPaid: qpOptions.paid,
+            starsCount:      qpOptions.paid ? qpOptions.stars : 0,
+            sendWithoutSound: false,
+            scheduledTime:   qpSchedule || null,
+          }),
+        });
+        const d = await r.json();
+        if (!d.success) throw new Error(d.error || 'Unknown error');
+        ok++;
+      } catch (_) { fail++; }
+    }
+
+    if (fail === 0) {
+      qpShowStatus(`✅ ${qpSchedule ? 'Scheduled' : 'Sent'} to ${ok} channel${ok > 1 ? 's' : ''}!`, 'ok');
+      setTimeout(closeQP, 2200);
+    } else {
+      qpShowStatus(`⚠️ ${ok} ok · ${fail} failed`, 'warn');
+    }
+  } catch (err) {
+    qpShowStatus(`❌ ${err.message}`, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = qpSchedule ? `📤 Schedule → ${new Date(qpSchedule).toLocaleTimeString()}` : '📤 Post Now';
+  }
+}
+
+function qpShowStatus(msg, type) {
+  const s = document.getElementById('qpStatus');
+  s.textContent = msg; s.className = 'status ' + type;
+}
+</script>
+</body>
+</html>

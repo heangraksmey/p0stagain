@@ -1,0 +1,13 @@
+services:
+  telegram-bot:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      - bot-data:/data
+
+volumes:
+  bot-data:
